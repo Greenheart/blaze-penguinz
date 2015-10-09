@@ -11,7 +11,7 @@ Template.body.helpers({
 });
 
 function preload() {
-  game.load.spritesheet('dude', 'img/pingu2.png', 96, 96);
+  game.load.spritesheet('dude', 'img/pingu1.png', 64, 64);
   game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
 }
 
