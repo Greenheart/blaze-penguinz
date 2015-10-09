@@ -12,7 +12,7 @@ Template.body.helpers({
 
 function preload() {
   game.load.image('dude', 'img/man.png');
-  game.load.image('spell1', 'img/spell1.png');
+  game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
 }
 
 function create() {
@@ -21,7 +21,7 @@ function create() {
   game.physics.ninja.gravity = 0;
 
 
-  makeRangedSpells(20);
+  initRangedSpells(20);
   makeDude(game.world.centerX, game.world.centerY);
 
   game.input.mouse.capture = true;
@@ -33,27 +33,32 @@ function update() {
 }
 
 function render() {
-  game.debug.body(dude);
+  /*game.debug.body(dude);*/
 
-  rangedSpells.forEachAlive(function(spell) {
+  /*rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
-  });
+  });*/
 }
 
 
 
-function move(object, pointer) {
+
+//--------------------------------------------------GENERAL---------------------------------------------------
+
+function moveToObject(object, pointer) {
   angle = game.physics.arcade.angleToPointer(object, pointer)
   angleDeg = angle * (180/Math.PI);
   object.rotation = angle;
   object.body.moveTo(object.moveSpeed, angleDeg);
   object.target = [pointer.x, pointer.y];
 }
+function moveByAngle (object, angle) {
+  angleDeg = angle * (180/Math.PI);
+  object.rotation = angle;
+  object.body.moveTo(object.moveSpeed, angleDeg);
+}
 
-
-
-
-
+//--------------------------------------------------DUDE---------------------------------------------------
 
 function makeDude(x, y) {
   dude = game.add.sprite(x, y, 'dude');
@@ -64,16 +69,9 @@ function makeDude(x, y) {
   dude.anchor.set(0.5);
   game.physics.ninja.enableCircle(dude, dude.radius);
 }
-
-function updateSpells() {
-  if (game.input.activePointer.leftButton.isDown && !dude.casting) {
-    spawnRangedSpell(dude, game.input.activePointer);
-  }
-}
-
 function updateDude() {
   if (game.input.activePointer.rightButton.isDown && !dude.casting) {
-    move(dude, game.input.activePointer);
+    moveToObject(dude, game.input.activePointer);
   }
 
   if (dude.target) {
@@ -83,24 +81,29 @@ function updateDude() {
     }
   }
 }
-function makeRangedSpells(amount) {
+
+//--------------------------------------------------RANGED SPELL---------------------------------------------------
+
+function initRangedSpells(amount) {
   // initiate the group for ranged-spell-objs
   rangedSpells = game.add.group();
-  rangedSpells.createMultiple(amount, 'spell1');
+  rangedSpells.createMultiple(amount, 'fireball');
   rangedSpells.setAll('checkWorldBounds', true);
   rangedSpells.setAll('outOfBoundsKill', true);
   rangedSpells.forEach(function(spell) {
     game.physics.ninja.enableCircle(spell, 20);
     spell.body.collideWorldBounds = false;
+    spell.animations.add('fly', [0, 1, 2, 3, 4], 15, true);
     spell.anchor.set(0.5);
     spell.moveSpeed = 600;
+    spell.scale.set(2);
   });
 }
-
 function spawnRangedSpell(player, pointer) {
   // create a new spell-obj
-  player.casting = true;
+
   if (game.time.now > nextFireTime){
+    player.casting = true;
     nextFireTime = game.time.now + rangedSpellCooldown;
 
     player.body.setZeroVelocity();
@@ -114,8 +117,14 @@ function spawnRangedSpell(player, pointer) {
 
     //simple (and still buggy) casting time
     game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
-      move(spell, pointer);
+      spell.animations.play('fly');
+      moveByAngle(spell, angle);
       player.casting = false;
     });
+  }
+}
+function updateSpells() {
+  if (game.input.activePointer.leftButton.isDown && !dude.casting) {
+    spawnRangedSpell(dude, game.input.activePointer);
   }
 }
