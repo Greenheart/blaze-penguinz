@@ -11,12 +11,13 @@ Template.body.helpers({
 });
 
 function preload() {
-  game.load.image('dude', 'img/man.png');
+  game.load.spritesheet('dude', 'img/pingu2.png', 96, 96);
   game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
 }
 
 function create() {
   game.canvas.oncontextmenu = function (e) { e.preventDefault(); }
+  game.stage.backgroundColor = '#124184';
   game.physics.startSystem(Phaser.Physics.NINJA);
   game.physics.ninja.gravity = 0;
 
@@ -33,9 +34,9 @@ function update() {
 }
 
 function render() {
-  /*game.debug.body(dude);*/
+  /*game.debug.body(dude);
 
-  /*rangedSpells.forEachAlive(function(spell) {
+  rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
   });*/
 }
@@ -62,6 +63,7 @@ function moveByAngle (object, angle) {
 
 function makeDude(x, y) {
   dude = game.add.sprite(x, y, 'dude');
+  dude.animations.add('walk', [0,1,2,3], 15, true);
   dude.moveSpeed = 300;
   dude.radius = 30;
   dude.target = null;
@@ -75,11 +77,16 @@ function updateDude() {
   }
 
   if (dude.target) {
+    dude.animations.play('walk');
     if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
-      dude.body.setZeroVelocity();
-      dude.target = null;
+      stopDude();
     }
   }
+}
+function stopDude() {
+  dude.body.setZeroVelocity();
+  dude.target = null;
+  dude.animations.stop('walk', true);
 }
 
 //--------------------------------------------------RANGED SPELL---------------------------------------------------
@@ -106,7 +113,7 @@ function spawnRangedSpell(player, pointer) {
     player.casting = true;
     nextFireTime = game.time.now + rangedSpellCooldown;
 
-    player.body.setZeroVelocity();
+    stopDude();
 
     var spell = rangedSpells.getFirstDead();
     spell.reset(player.body.x, player.body.y);
