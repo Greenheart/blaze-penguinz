@@ -1,10 +1,20 @@
 <head>
-  <title>ForcePush</title>
+  <title>ForcePush Arena</title>
   <script charset="utf-8" type="text/javascript" src="js/phaser-ninja-physics.min.js"></script>
 </head>
 
 <body>
   <div id="container">
-    {{game}}
+    <!-- {{> loginButtons}} -->
+
+    {{#if currentUser}}
+      {{#if inGame}}
+        {{game}}
+      {{else}}
+        {{> lobby}}
+      {{/if}}
+    {{else}}
+      {{> welcome}}
+    {{/if}}
   </div>
 </body>
