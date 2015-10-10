@@ -23,13 +23,9 @@ function create() {
   game.physics.startSystem(Phaser.Physics.NINJA);
   game.physics.ninja.gravity = 0;
 
-  fireballSFX = game.add.audio('fireballSFX', 0.5);
-  music = game.add.audio('music');
-  music.play();
-
-
+  initSounds();
   initRangedSpells(20);
-  makeDude(game.world.centerX, game.world.centerY);
+  initDude(game.world.centerX, game.world.centerY);
 
   game.input.mouse.capture = true;
 }
@@ -40,11 +36,11 @@ function update() {
 }
 
 function render() {
-  /*game.debug.body(dude);
+  game.debug.body(dude);
 
   rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
-  });*/
+  });
 }
 
 
@@ -67,11 +63,11 @@ function moveByAngle (object, angle) {
 
 //--------------------------------------------------DUDE---------------------------------------------------
 
-function makeDude(x, y) {
+function initDude(x, y) {
   dude = game.add.sprite(x, y, 'dude');
   dude.animations.add('walk', [0,1,2,3], 15, true);
   dude.moveSpeed = 300;
-  dude.radius = 30;
+  dude.radius = 20;
   dude.target = null;
   dude.casting = false;
   dude.anchor.set(0.5);
@@ -104,10 +100,10 @@ function initRangedSpells(amount) {
   rangedSpells.setAll('checkWorldBounds', true);
   rangedSpells.setAll('outOfBoundsKill', true);
   rangedSpells.forEach(function(spell) {
-    game.physics.ninja.enableCircle(spell, 20);
+    game.physics.ninja.enableCircle(spell, 10);
     spell.body.collideWorldBounds = false;
     spell.animations.add('fly', [0, 1, 2, 3, 4], 15, true);
-    spell.anchor.set(0.5);
+    spell.anchor.set(0.8, 0.5);
     spell.moveSpeed = 600;
     spell.scale.set(2);
   });
@@ -143,4 +139,12 @@ function updateSpells() {
   if (game.input.activePointer.leftButton.isDown && !dude.casting) {
     spawnRangedSpell(dude, game.input.activePointer);
   }
+}
+
+//--------------------------------------------------INITS----------------------------------------------------
+
+function initSounds() {
+  fireballSFX = game.add.audio('fireballSFX', 0.5);
+  music = game.add.audio('music', 0, true);
+  music.play();
 }

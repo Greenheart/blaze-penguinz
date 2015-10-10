@@ -1,3 +1,5 @@
+Meteor.subscribe('rooms');
+
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
 });
@@ -14,6 +16,11 @@ Template.body.helpers({
 Template.lobby.events({
   'click #play': function(event) {
     event.preventDefault();
+    if (Rooms.findOne()){
+      Meteor.call('joinRoom', Rooms.findOne()._id);
+    } else {
+      Meteor.call('addRoom');
+    }
     Session.set("inGame", true);
   }
 });
