@@ -8,10 +8,27 @@ Meteor.publish('users', function() {
 
 Meteor.methods({
   addRoom: function() {
-    Rooms.insert({ players: [Meteor.userId()] });
+    var room = {
+      players: [Meteor.userId()],
+      playerPos: {}
+    };
+
+    room.playerPos[Meteor.userId()] = null;
+    Rooms.insert(room);
+
+    /*Rooms.insert({
+      players: [Meteor.userId()],
+      playerPos: { Meteor.userId() : [x, y] }
+    });*/
   },
   joinRoom: function(roomId) {
-    Rooms.update(roomId, {$push: { players: Meteor.userId() } } );
+    var query = {
+      $push: { players: Meteor.userId()},
+      $set: {}
+    };
+    query.$set["playerPos." + Meteor.userId()] = null;
+
+    Rooms.update(roomId, query);
   },
   removeRoom: function(roomId) {
     Rooms.remove({ _id: roomId });
