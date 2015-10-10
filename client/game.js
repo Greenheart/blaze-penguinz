@@ -11,8 +11,10 @@ Template.body.helpers({
 });
 
 function preload() {
-  game.load.spritesheet('dude', 'img/pingu1.png', 64, 64);
+  game.load.spritesheet('dude', 'img/pingvin.png', 64, 64);
   game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
+  game.load.audio('fireballSFX', 'audio/fireball.wav');
+  game.load.audio('music', 'audio/music.wav');
 }
 
 function create() {
@@ -20,6 +22,10 @@ function create() {
   game.stage.backgroundColor = '#124184';
   game.physics.startSystem(Phaser.Physics.NINJA);
   game.physics.ninja.gravity = 0;
+
+  fireballSFX = game.add.audio('fireballSFX', 0.5);
+  music = game.add.audio('music');
+  music.play();
 
 
   initRangedSpells(20);
@@ -116,6 +122,7 @@ function spawnRangedSpell(player, pointer) {
     stopDude();
 
     var spell = rangedSpells.getFirstDead();
+    spell.alpha = 0;
     spell.reset(player.body.x, player.body.y);
 
     //rotate player to the correct firing-angle
@@ -124,6 +131,8 @@ function spawnRangedSpell(player, pointer) {
 
     //simple (and still buggy) casting time
     game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
+      fireballSFX.play();
+      spell.alpha = 1;
       spell.animations.play('fly');
       moveByAngle(spell, angle);
       player.casting = false;

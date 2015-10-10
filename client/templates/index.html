@@ -4,17 +4,18 @@
 </head>
 
 <body>
-  <div id="container">
-    <!-- {{> loginButtons}} -->
 
-    {{#if currentUser}}
-      {{#if inGame}}
+  <!-- {{> loginButtons}} -->
+  {{#if currentUser}}
+    {{#if inGame}}
+      <div id="container">
         {{game}}
-      {{else}}
-        {{> lobby}}
-      {{/if}}
+      </div>
     {{else}}
-      {{> welcome}}
+      {{> lobby}}
     {{/if}}
-  </div>
+  {{else}}
+    {{> welcome}}
+  {{/if}}
+
 </body>
