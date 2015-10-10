@@ -53,7 +53,7 @@ function moveToPos(object, x, y) {
     object.rotation = angle;
     object.body.moveTo(object.moveSpeed, angleDeg);
     object.moving = true;
-    console.log("Moving...");
+    //console.log("Moving...");
   }
 }
 function moveByAngle (object, angle) {
@@ -88,40 +88,57 @@ function initDudes() {
   }
   dudes.forEach(function(dude) {
     dude.animations.add('walk', dudeAnimFrames[dude.z -1], 15, true);
-    dude.reset(100, 100);
+    dude.reset(game.world.centerX, game.world.centerY);
     dude.alive = true;
     dude.moveSpeed = 300;
     dude.radius = 20;
     dude.target = null;
+    dude.oldTarget = null;
     dude.moving = false;
     dude.casting = false;
     dude.anchor.set(0.5);
     game.physics.ninja.enableCircle(dude, dude.radius);
+    dude.body.checkCollision = true;
+    dude.body.collideWorldBounds = true;
   });
 }
 
 function updateDudes() {
-  var oldTarget = dudes.children[myDudeIndex].target;
 
+  // Set the oldTarget variable to the target from previous frame
+  dudes.children.forEach( function(dude) {
+    dude.oldTarget = dude.target;
+  });
+
+  // Change the target of this players dude if requested and possible
   if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
     dudes.children[myDudeIndex].target = [game.input.activePointer.x, game.input.activePointer.y];
   }
 
-  if (dudes.children[myDudeIndex].target != oldTarget) {
-    //update the current player's target posision
-    var query = {
-      $set: {}
-    };
-    query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
+  if (dudes.children[myDudeIndex].target !== null && dudes.children[myDudeIndex].oldTarget !== null) {
+    if (dudes.children[myDudeIndex].target.toString() != dudes.children[myDudeIndex].oldTarget.toString()) {
+      //update the current player's target posision
+      console.log("sending data")
+      var query = {
+        $set: {}
+      };
+      query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
 
-    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+    }
   }
 
   dudes.children.forEach( function(dude) {
+
+    // grab a new target from the db
     dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
-    if (dude.target && dude.target != oldTarget) {
-      moveToPos(dude, dude.target[0], dude.target[1]);
+
+    if (dude.target !== null && dude.oldTarget !== null) {
+      if (dude.target.toString() !== dude.oldTarget.toString()) {
+        moveToPos(dude, dude.target[0], dude.target[1]);
+      }
     }
+
     if (dude.moving) {
       dude.animations.play('walk');
       if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
