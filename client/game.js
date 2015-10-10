@@ -4,6 +4,7 @@ var rangedSpellCooldown = 1000;
 var nextFireTime = 0;
 var dudeAnimFrames = [[0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15], [16,17,18,19]]
 var myDudeIndex = null;
+var query;
 
 Template.body.helpers({
   'game': function() {
@@ -53,7 +54,7 @@ function moveToPos(object, x, y) {
     object.rotation = angle;
     object.body.moveTo(object.moveSpeed, angleDeg);
     object.moving = true;
-    //console.log("Moving...");
+    console.log("Moving...");
   }
 }
 function moveByAngle (object, angle) {
@@ -92,8 +93,8 @@ function initDudes() {
     dude.alive = true;
     dude.moveSpeed = 300;
     dude.radius = 20;
-    dude.target = null;
-    dude.oldTarget = null;
+    dude.target = [100,100];
+    dude.oldTarget = [100,100];
     dude.moving = false;
     dude.casting = false;
     dude.anchor.set(0.5);
@@ -104,7 +105,6 @@ function initDudes() {
 }
 
 function updateDudes() {
-
   // Set the oldTarget variable to the target from previous frame
   dudes.children.forEach( function(dude) {
     dude.oldTarget = dude.target;
@@ -115,17 +115,25 @@ function updateDudes() {
     dudes.children[myDudeIndex].target = [game.input.activePointer.x, game.input.activePointer.y];
   }
 
-  if (dudes.children[myDudeIndex].target !== null && dudes.children[myDudeIndex].oldTarget !== null) {
-    if (dudes.children[myDudeIndex].target.toString() != dudes.children[myDudeIndex].oldTarget.toString()) {
-      //update the current player's target posision
-      console.log("sending data")
-      var query = {
+  // if any of old and new target is null
+  if (dudes.children[myDudeIndex].oldTarget === null || dudes.children[myDudeIndex].target === null){
+    // if one of them isnt null (they are different)
+    if (dudes.children[myDudeIndex].oldTarget !== null || dudes.children[myDudeIndex].target !== null) {
+      query = {
         $set: {}
       };
       query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
 
       Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
     }
+  // if it comes to this point, both variables must be arrays and can be compared as such
+  } else if (! isSame(dudes.children[myDudeIndex].target, dudes.children[myDudeIndex].oldTarget)) {
+    query = {
+      $set: {}
+    };
+    query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
+
+    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
 
   dudes.children.forEach( function(dude) {
@@ -133,10 +141,12 @@ function updateDudes() {
     // grab a new target from the db
     dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
 
-    if (dude.target !== null && dude.oldTarget !== null) {
-      if (dude.target.toString() !== dude.oldTarget.toString()) {
+    if (dude.target === null || dude.oldTarget === null) {
+      if (dude.target !== null) {
         moveToPos(dude, dude.target[0], dude.target[1]);
       }
+    } else if (! isSame(dude.target, dude.oldTarget)) {
+      moveToPos(dude, dude.target[0], dude.target[1]);
     }
 
     if (dude.moving) {
@@ -211,4 +221,22 @@ function initSounds() {
   fireballSFX = game.add.audio('fireballSFX', 0.5);
   music = game.add.audio('music', 0, true);
   music.play();
+}
+
+
+
+
+
+
+
+
+function isSame(array1, array2) {
+  if (array1.length !== array2.length) {
+    return false;
+  }
+
+  return array1.every(function(element, index) {
+    // check if every elem of arr1 is in arr2 on same position
+    return element === array2[index];
+  });
 }
