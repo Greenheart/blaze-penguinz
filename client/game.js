@@ -2,6 +2,8 @@ var dude;
 var rangedSpells;
 var rangedSpellCooldown = 1000;
 var nextFireTime = 0;
+var dudeAnimFrames = [[0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15], [16,17,18,19]]
+var myDudeIndex = null;
 
 Template.body.helpers({
   'game': function() {
@@ -11,49 +13,48 @@ Template.body.helpers({
 });
 
 function preload() {
-  game.load.spritesheet('dude', 'img/pingvin.png', 64, 64);
   game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
+  game.load.spritesheet('penguins', 'img/penguins.png', 64, 64);
   game.load.audio('fireballSFX', 'audio/fireball.wav');
   game.load.audio('music', 'audio/music.wav');
 }
 
 function create() {
   game.canvas.oncontextmenu = function (e) { e.preventDefault(); }
+  game.stage.disableVisibilityChange = true;
   game.stage.backgroundColor = '#124184';
   game.physics.startSystem(Phaser.Physics.NINJA);
   game.physics.ninja.gravity = 0;
 
   initSounds();
+  initDudes();
   initRangedSpells(20);
-  initDude(game.world.centerX, game.world.centerY);
 
   game.input.mouse.capture = true;
 }
 
 function update() {
-  updateDude();
+  updateDudes();
   updateSpells();
 }
 
 function render() {
-  game.debug.body(dude);
-
-  rangedSpells.forEachAlive(function(spell) {
+  /*rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
-  });
+  });*/
 }
-
-
-
 
 //--------------------------------------------------GENERAL---------------------------------------------------
 
-function moveToObject(object, pointer) {
-  angle = game.physics.arcade.angleToPointer(object, pointer)
-  angleDeg = angle * (180/Math.PI);
-  object.rotation = angle;
-  object.body.moveTo(object.moveSpeed, angleDeg);
-  object.target = [pointer.x, pointer.y];
+function moveToPos(object, x, y) {
+  if (!Phaser.Circle.contains(new Phaser.Circle(object.body.x, object.body.y, 10), x, y)) {
+    angle = game.physics.arcade.angleToXY(object, x, y);
+    angleDeg = angle * (180/Math.PI);
+    object.rotation = angle;
+    object.body.moveTo(object.moveSpeed, angleDeg);
+    object.moving = true;
+    console.log("Moving...");
+  }
 }
 function moveByAngle (object, angle) {
   angleDeg = angle * (180/Math.PI);
@@ -61,33 +62,68 @@ function moveByAngle (object, angle) {
   object.body.moveTo(object.moveSpeed, angleDeg);
 }
 
-//--------------------------------------------------DUDE---------------------------------------------------
+//-----------------------------------------------------DUDES------------------------------------------------------------
 
-function initDude(x, y) {
-  dude = game.add.sprite(x, y, 'dude');
-  dude.animations.add('walk', [0,1,2,3], 15, true);
-  dude.moveSpeed = 300;
-  dude.radius = 20;
-  dude.target = null;
-  dude.casting = false;
-  dude.anchor.set(0.5);
-  game.physics.ninja.enableCircle(dude, dude.radius);
-}
-function updateDude() {
-  if (game.input.activePointer.rightButton.isDown && !dude.casting) {
-    moveToObject(dude, game.input.activePointer);
-  }
+function initDudes() {
+  // Get all playerIds from the room that this game starts in
+  players = Rooms.findOne({ players: Meteor.userId() }).players;
 
-  if (dude.target) {
-    dude.animations.play('walk');
-    if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
-      stopDude();
+  // Count how many physical player objects this room shall contain (as many as there are players in the room.players array)
+  amount = players.length;
+
+  // Create the physical (ingame) group for all the playes
+  dudes = game.add.group();
+  // Make as many physical group objects as there are players
+  dudes.createMultiple(amount, 'penguins');
+
+  for (i = 0; i < dudes.children.length; i++) {
+    // Loop through the physical group of objects and give every object a username (from the username of the player with the id)
+    dudes.children[i].username = Meteor.users.findOne({ _id: players[i] }).username;
+    dudes.children[i].owner = Meteor.users.findOne({ _id: players[i] })._id;
+
+    // If the dude at point i in the array is your dude, set nyDudeIndex to i
+    if (dudes.children[i].owner === Meteor.userId()) {
+      myDudeIndex = i;
     }
   }
+  dudes.forEach(function(dude) {
+    dude.animations.add('walk', dudeAnimFrames[dude.z -1], 15, true);
+    dude.reset(100, 100);
+    dude.alive = true;
+    dude.moveSpeed = 300;
+    dude.radius = 20;
+    dude.target = null;
+    dude.moving = false;
+    dude.casting = false;
+    dude.anchor.set(0.5);
+    game.physics.ninja.enableCircle(dude, dude.radius);
+  });
 }
-function stopDude() {
+
+function updateDudes() {
+  var oldTarget = dudes.children[myDudeIndex].target;
+
+  if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
+    dudes.children[myDudeIndex].target = [game.input.activePointer.x, game.input.activePointer.y];
+  }
+
+  dudes.children.forEach( function(dude) {
+    if (dude.target && dude.target != oldTarget) {
+      moveToPos(dude, dude.target[0], dude.target[1]);
+    }
+    if (dude.moving) {
+      dude.animations.play('walk');
+      if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
+        stopDude(dude);
+      }
+    }
+  })
+}
+
+function stopDude(dude) {
   dude.body.setZeroVelocity();
   dude.target = null;
+  dude.moving = false;
   dude.animations.stop('walk', true);
 }
 
