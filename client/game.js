@@ -13,6 +13,20 @@ Template.body.helpers({
 });
 
 function preload() {
+  //display loading progress
+  var loadingText = game.add.text(game.world.centerX, game.world.centerY, 'loading... 0%', { fill: '#ffffff' });
+  loadingText.anchor.setTo(0.5);
+
+  game.load.onFileComplete.add(function(progress) {
+    // every time a file is loaded, update loading progress text
+    if (progress === 0 || progress === 100) {
+      // if completed, remove text
+      game.world.remove(loadingText);
+    } else {
+      loadingText.text = 'loading... ' + progress + '%';
+    }
+  }, this);
+
   game.load.spritesheet('fireball', 'img/fireball1.png', 32, 32);
   game.load.spritesheet('penguins', 'img/penguins.png', 64, 64);
   game.load.audio('fireballSFX', 'audio/fireball.wav');
