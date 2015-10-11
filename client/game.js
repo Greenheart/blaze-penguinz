@@ -42,8 +42,8 @@ function create() {
   game.physics.ninja.gravity = 0;
 
   initSounds();
-  initDudes();
   initRangedSpells(20);
+  initDudes();
 
   game.input.mouse.capture = true;
 }
@@ -53,8 +53,11 @@ function update() {
   updateSpells();
 }
 
-function render() {
-  /*rangedSpells.forEachAlive(function(spell) {
+function render() {/*
+  dudes.forEach(function(dude) {
+    game.debug.body(dude);
+  });
+  rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
   });*/
 }
@@ -119,10 +122,6 @@ function initDudes() {
 }
 
 function updateDudes() {
-  // Set the oldTarget variable to the target from previous frame
-  dudes.children.forEach( function(dude) {
-    dude.oldTarget = dude.target;
-  });
 
   // Change the target of this players dude if requested and possible
   if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
@@ -133,6 +132,7 @@ function updateDudes() {
   if (dudes.children[myDudeIndex].oldTarget === null || dudes.children[myDudeIndex].target === null){
     // if one of them isnt null (they are different)
     if (dudes.children[myDudeIndex].oldTarget !== null || dudes.children[myDudeIndex].target !== null) {
+      // Send data to server about a new position
       query = {
         $set: {}
       };
@@ -141,7 +141,9 @@ function updateDudes() {
       Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
     }
   // if it comes to this point, both variables must be arrays and can be compared as such
+  // chenk if they are different
   } else if (! isSame(dudes.children[myDudeIndex].target, dudes.children[myDudeIndex].oldTarget)) {
+    // Send data to server about a new position
     query = {
       $set: {}
     };
@@ -152,14 +154,19 @@ function updateDudes() {
 
   dudes.children.forEach( function(dude) {
 
-    // grab a new target from the db
+    // grab the lastest target (for every dude) from the db
     dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
 
+    // if any of oldTarget and target are null
     if (dude.target === null || dude.oldTarget === null) {
+      // if target isnt null
       if (dude.target !== null) {
+        // give the dude velocity towards his target point
         moveToPos(dude, dude.target[0], dude.target[1]);
-      }
+      } // else do nothing
+    // if this else if statement triggers, both values (target and oldTarget) are arrays and can be compared
     } else if (! isSame(dude.target, dude.oldTarget)) {
+      // give the dude velocity towards his target point
       moveToPos(dude, dude.target[0], dude.target[1]);
     }
 
@@ -169,6 +176,9 @@ function updateDudes() {
         stopDude(dude);
       }
     }
+
+    // Set the oldTarget variable to the target as the last thing, for the next frame
+    dude.oldTarget = dude.target;
   })
 }
 
@@ -196,36 +206,35 @@ function initRangedSpells(amount) {
     spell.scale.set(2);
   });
 }
-function spawnRangedSpell(player, pointer) {
+function spawnRangedSpell(dude, x, y) {
   // create a new spell-obj
 
-  if (game.time.now > nextFireTime){
-    player.casting = true;
-    nextFireTime = game.time.now + rangedSpellCooldown;
+  dude.casting = true;
+  stopDude(dude);
 
-    stopDude();
+  var spell = rangedSpells.getFirstDead();
+  spell.alpha = 0;
+  spell.reset(dude.body.x, dude.body.y);
 
-    var spell = rangedSpells.getFirstDead();
-    spell.alpha = 0;
-    spell.reset(player.body.x, player.body.y);
+  //rotate player to the correct firing-angle
+  angle = game.physics.arcade.angleToXY(spell, x, y)
+  dude.rotation = angle;
 
-    //rotate player to the correct firing-angle
-    angle = game.physics.arcade.angleToPointer(spell, pointer)
-    player.rotation = angle;
-
-    //simple (and still buggy) casting time
-    game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
-      fireballSFX.play();
-      spell.alpha = 1;
-      spell.animations.play('fly');
-      moveByAngle(spell, angle);
-      player.casting = false;
-    });
-  }
+  //simple (and still buggy) casting time
+  game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
+    fireballSFX.play();
+    spell.animations.play('fly');
+    moveByAngle(spell, angle);
+    spell.alpha = 1;
+    dude.casting = false;
+  });
 }
 function updateSpells() {
-  if (game.input.activePointer.leftButton.isDown && !dude.casting) {
-    spawnRangedSpell(dude, game.input.activePointer);
+  if (game.input.activePointer.leftButton.isDown && !dudes.children[myDudeIndex].casting) {
+    if (game.time.now > nextFireTime) {
+      spawnRangedSpell(dudes.children[myDudeIndex], game.input.activePointer.x, game.input.activePointer.y);
+      nextFireTime = game.time.now + rangedSpellCooldown;
+    }
   }
 }
 
@@ -233,7 +242,7 @@ function updateSpells() {
 
 function initSounds() {
   fireballSFX = game.add.audio('fireballSFX', 0.5);
-  music = game.add.audio('music', 0, true);
+  music = game.add.audio('music', 1, true);
   music.play();
 }
 
