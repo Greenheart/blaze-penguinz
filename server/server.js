@@ -10,10 +10,12 @@ Meteor.methods({
   addRoom: function() {
     var room = {
       players: [Meteor.userId()],
-      playerPos: {}
+      playerPos: {},
+      spellPos: {}
     };
 
     room.playerPos[Meteor.userId()] = null;
+    room.spellPos[Meteor.userId()] = null;
     Rooms.insert(room);
 
     /*Rooms.insert({
@@ -27,6 +29,7 @@ Meteor.methods({
       $set: {}
     };
     query.$set["playerPos." + Meteor.userId()] = null;
+    query.$set["spellPos." + Meteor.userId()] = null;
 
     Rooms.update(roomId, query);
   },

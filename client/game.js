@@ -1,6 +1,6 @@
 var dude;
 var rangedSpells;
-var rangedSpellCooldown = 1000;
+var rangedSpellCooldown = 2000;
 var nextFireTime = 0;
 var dudeAnimFrames = [[0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15], [16,17,18,19]]
 var myDudeIndex = null;
@@ -71,7 +71,7 @@ function moveToPos(object, x, y) {
     object.rotation = angle;
     object.body.moveTo(object.moveSpeed, angleDeg);
     object.moving = true;
-    console.log("Moving...");
+    //console.log("Moving...");
   }
 }
 function moveByAngle (object, angle) {
@@ -163,7 +163,9 @@ function updateDudes() {
       if (dude.target !== null) {
         // give the dude velocity towards his target point
         moveToPos(dude, dude.target[0], dude.target[1]);
-      } // else do nothing
+      } /*else {
+        stopDude(dude);
+      }*/
     // if this else if statement triggers, both values (target and oldTarget) are arrays and can be compared
     } else if (! isSame(dude.target, dude.oldTarget)) {
       // give the dude velocity towards his target point
@@ -172,8 +174,10 @@ function updateDudes() {
 
     if (dude.moving) {
       dude.animations.play('walk');
-      if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
-        stopDude(dude);
+      if (dude.target) {
+        if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
+          stopDude(dude);
+        }
       }
     }
 
@@ -204,40 +208,77 @@ function initRangedSpells(amount) {
     spell.anchor.set(0.8, 0.5);
     spell.moveSpeed = 600;
     spell.scale.set(2);
+    spell.owner = null;
   });
 }
 function spawnRangedSpell(dude, x, y) {
   // create a new spell-obj
 
-  dude.casting = true;
-  stopDude(dude);
+  // check one extra time if the player isnt already casting a spell
+  if (!dude.casting) {
+    dude.casting = true;
+    stopDude(dude);
 
-  var spell = rangedSpells.getFirstDead();
-  spell.alpha = 0;
-  spell.reset(dude.body.x, dude.body.y);
+    var spell = rangedSpells.getFirstDead();
+    spell.alpha = 0;
+    spell.owner = dude;
+    spell.reset(dude.body.x, dude.body.y);
 
-  //rotate player to the correct firing-angle
-  angle = game.physics.arcade.angleToXY(spell, x, y)
-  dude.rotation = angle;
-  
-  //simple (and still buggy) casting time
-  game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
-    fireballSFX.play();
-    spell.animations.play('fly');
-    moveByAngle(spell, angle);
-    dude.casting = false;
-    game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
-      spell.alpha = 1;
+    //rotate player to the correct firing-angle
+    angle = game.physics.arcade.angleToXY(spell, x, y)
+    dude.rotation = angle;
+
+    //simple (and still buggy) casting time
+    game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
+      dude.casting = false;
+      fireballSFX.play();
+      spell.animations.play('fly');
+      moveByAngle(spell, angle);
+      game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
+        spell.alpha = 1;
+      });
     });
-  });
+  }
 }
 function updateSpells() {
+
   if (game.input.activePointer.leftButton.isDown && !dudes.children[myDudeIndex].casting) {
     if (game.time.now > nextFireTime) {
-      spawnRangedSpell(dudes.children[myDudeIndex], game.input.activePointer.x, game.input.activePointer.y);
+
+      // set the time when a spell can be cast again
       nextFireTime = game.time.now + rangedSpellCooldown;
+
+      // send data to db about the cast spell target points
+      query = {
+        $set: {}
+      };
+      query.$set["spellPos." + Meteor.userId()] = [game.input.activePointer.x, game.input.activePointer.y];
+      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+
+      console.log("Sending data");
     }
   }
+
+  dudes.children.forEach( function(dude) {
+
+    // get a spell target point from the database
+    var spellPos = Rooms.findOne({ players: dude.owner }).spellPos[dude.owner]
+
+    // if this point isnt null, spawn a spell for this dude with the proper target
+    if (spellPos) {
+
+      spawnRangedSpell(dude, spellPos[0], spellPos[1]);
+
+      // set the target point to null again after every client recieves the information
+      game.time.events.add(Phaser.Timer.SECOND * 0.1, function() {
+        query = {
+          $set: {}
+        };
+        query.$set["spellPos." + Meteor.userId()] = null;
+        Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+      });
+    }
+  });
 }
 
 //--------------------------------------------------INITS----------------------------------------------------
@@ -247,12 +288,6 @@ function initSounds() {
   music = game.add.audio('music', 1, true);
   music.play();
 }
-
-
-
-
-
-
 
 
 function isSame(array1, array2) {
