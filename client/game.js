@@ -219,14 +219,16 @@ function spawnRangedSpell(dude, x, y) {
   //rotate player to the correct firing-angle
   angle = game.physics.arcade.angleToXY(spell, x, y)
   dude.rotation = angle;
-
+  
   //simple (and still buggy) casting time
   game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
     fireballSFX.play();
     spell.animations.play('fly');
     moveByAngle(spell, angle);
-    spell.alpha = 1;
     dude.casting = false;
+    game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
+      spell.alpha = 1;
+    });
   });
 }
 function updateSpells() {
