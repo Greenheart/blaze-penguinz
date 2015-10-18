@@ -230,12 +230,12 @@ function spawnRangedSpell(dude, x, y) {
 
     //simple (and still buggy) casting time
     game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
-      dude.casting = false;
       fireballSFX.play();
       spell.animations.play('fly');
       moveByAngle(spell, angle);
       game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
         spell.alpha = 1;
+        dude.casting = false;
       });
     });
   }
@@ -249,13 +249,13 @@ function updateSpells() {
       nextFireTime = game.time.now + rangedSpellCooldown;
 
       // send data to db about the cast spell target points
+      // console.log("Sending data, X -> " + game.input.activePointer.x + " Y -> " + game.input.activePointer.y);
       query = {
         $set: {}
       };
       query.$set["spellPos." + Meteor.userId()] = [game.input.activePointer.x, game.input.activePointer.y];
       Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
 
-      console.log("Sending data");
     }
   }
 
@@ -263,6 +263,10 @@ function updateSpells() {
 
     // get a spell target point from the database
     var spellPos = Rooms.findOne({ players: dude.owner }).spellPos[dude.owner]
+
+    if (spellPos) {
+      // console.log("Recieveing data, X -> " + spellPos[0] + " Y -> " + spellPos[1]);
+    }
 
     // if this point isnt null, spawn a spell for this dude with the proper target
     if (spellPos) {
