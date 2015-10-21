@@ -4,7 +4,6 @@ var rangedSpellCooldown = 2000;
 var nextFireTime = 0;
 var dudeAnimFrames = [[0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15], [16,17,18,19]]
 var myDudeIndex = null;
-var query;
 
 Template.body.helpers({
   'game': function() {
@@ -119,7 +118,7 @@ function updateDudes() {
   // Change the target of this players dude if requested and possible
   if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
     // If the player is moving to another target position than the one in db
-    if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  Rooms.findOne({ players: Meteor.userId() }).playerPos[Meteor.userId()])) {
+    if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  Rooms.findOne({ players: Meteor.userId() }).playerTarget[Meteor.userId()])) {
 
       // Update position in db
       Meteor.call('pushPos', [game.input.activePointer.x, game.input.activePointer.y]);
@@ -129,11 +128,11 @@ function updateDudes() {
   dudes.children.forEach( function(dude) {
 
 
-    if (! isSame(dude.target, Rooms.findOne({ players: dude.owner }).playerPos[dude.owner])) {
+    if (! isSame(dude.target, Rooms.findOne({ players: dude.owner }).playerTarget[dude.owner])) {
       // grab the lastest target (for every dude) from the db
-      dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
+      dude.target = Rooms.findOne({ players: dude.owner }).playerTarget[dude.owner];
 
-      // if the dudes target has a target
+      // if the dude has a target
       if (! isSame(dude.target, [])) {
         moveToPos(dude, dude.target[0], dude.target[1]);
       }
@@ -152,7 +151,6 @@ function updateDudes() {
 
 function stopDude(dude) {
   dude.body.setZeroVelocity();
-  Meteor.call('pushPos', []);
   dude.moving = false;
   dude.animations.stop('walk', true);
 }
@@ -198,7 +196,7 @@ function spawnRangedSpell(dude, x, y) {
       spell.animations.play('fly');
       moveByAngle(spell, angle);
 
-      query = {
+      var query = {
         $set: {}
       };
       query.$set["spellTarget." + Meteor.userId()] = [];
@@ -222,7 +220,7 @@ function updateSpells() {
       nextFireTime = game.time.now + rangedSpellCooldown;
 
       // send data to db about the cast spell target points
-      query = {
+      var query = {
         $set: {}
       };
       query.$set["spellPos." + Meteor.userId()] = [game.input.activePointer.x, game.input.activePointer.y];

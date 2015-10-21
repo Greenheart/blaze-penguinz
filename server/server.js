@@ -1,5 +1,3 @@
-var query;
-
 Meteor.publish('rooms', function() {
   return Rooms.find();
 });
@@ -12,17 +10,17 @@ Meteor.methods({
   addRoom: function() {
     var room = {
       players: [Meteor.userId()],
-      playerPos: {},
+      playerTarget: {},
       spellPos: {}
     };
 
-    room.playerPos[Meteor.userId()] = [];
+    room.playerTarget[Meteor.userId()] = [];
     room.spellPos[Meteor.userId()] = [];
     Rooms.insert(room);
 
     /*Rooms.insert({
       players: [Meteor.userId()],
-      playerPos: { Meteor.userId() : [x, y] }
+      playerTarget: { Meteor.userId() : [x, y] }
     });*/
   },
   joinRoom: function(roomId) {
@@ -30,7 +28,7 @@ Meteor.methods({
       $push: { players: Meteor.userId()},
       $set: {}
     };
-    query.$set["playerPos." + Meteor.userId()] = [];
+    query.$set["playerTarget." + Meteor.userId()] = [];
     query.$set["spellPos." + Meteor.userId()] = [];
 
     Rooms.update(roomId, query);
@@ -39,10 +37,10 @@ Meteor.methods({
     Rooms.remove({ _id: roomId });
   },
   pushPos: function(position) {
-    query = {
+    var query = {
       $set: {}
     };
-    query.$set["playerPos." + Meteor.userId()] = position;
+    query.$set["playerTarget." + Meteor.userId()] = position;
 
     Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
