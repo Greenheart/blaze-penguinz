@@ -1,3 +1,5 @@
+var query;
+
 Meteor.publish('rooms', function() {
   return Rooms.find();
 });
@@ -14,8 +16,8 @@ Meteor.methods({
       spellPos: {}
     };
 
-    room.playerPos[Meteor.userId()] = null;
-    room.spellPos[Meteor.userId()] = null;
+    room.playerPos[Meteor.userId()] = [];
+    room.spellPos[Meteor.userId()] = [];
     Rooms.insert(room);
 
     /*Rooms.insert({
@@ -28,12 +30,20 @@ Meteor.methods({
       $push: { players: Meteor.userId()},
       $set: {}
     };
-    query.$set["playerPos." + Meteor.userId()] = null;
-    query.$set["spellPos." + Meteor.userId()] = null;
+    query.$set["playerPos." + Meteor.userId()] = [];
+    query.$set["spellPos." + Meteor.userId()] = [];
 
     Rooms.update(roomId, query);
   },
   removeRoom: function(roomId) {
     Rooms.remove({ _id: roomId });
+  },
+  pushPos: function(position) {
+    query = {
+      $set: {}
+    };
+    query.$set["playerPos." + Meteor.userId()] = position;
+
+    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
 });

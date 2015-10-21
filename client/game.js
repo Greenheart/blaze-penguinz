@@ -85,35 +85,27 @@ function moveByAngle (object, angle) {
 function initDudes() {
   // Get all playerIds from the room that this game starts in
   players = Rooms.findOne({ players: Meteor.userId() }).players;
-
-  // Count how many physical player objects this room shall contain (as many as there are players in the room.players array)
-  amount = players.length;
-
   // Create the physical (ingame) group for all the playes
   dudes = game.add.group();
   // Make as many physical group objects as there are players
-  dudes.createMultiple(amount, 'penguins');
+  dudes.createMultiple(players.length, 'penguins');
 
-  for (i = 0; i < dudes.children.length; i++) {
-    // Loop through the physical group of objects and give every object a username (from the username of the player with the id)
-    dudes.children[i].username = Meteor.users.findOne({ _id: players[i] }).username;
-    dudes.children[i].owner = Meteor.users.findOne({ _id: players[i] })._id;
-
-    // If the dude at point i in the array is your dude, set nyDudeIndex to i
-    if (dudes.children[i].owner === Meteor.userId()) {
-      myDudeIndex = i;
-    }
-  }
   dudes.forEach(function(dude) {
+    dude.username = Meteor.users.findOne({ _id: players[dude.z -1] });
+    dude.owner = Meteor.users.findOne({ _id: players[dude.z - 1] })._id;
+
+    if (dude.owner === Meteor.userId()) {
+      myDudeIndex = dude.z - 1;
+    }
+
     dude.animations.add('walk', dudeAnimFrames[dude.z -1], 15, true);
     dude.reset(game.world.centerX, game.world.centerY);
     dude.alive = true;
     dude.moveSpeed = 300;
     dude.radius = 20;
-    dude.target = [100,100];
-    dude.oldTarget = [100,100];
     dude.moving = false;
     dude.casting = false;
+    dude.target = [];
     dude.anchor.set(0.5);
     game.physics.ninja.enableCircle(dude, dude.radius);
     dude.body.checkCollision = true;
@@ -125,70 +117,41 @@ function updateDudes() {
 
   // Change the target of this players dude if requested and possible
   if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
-    dudes.children[myDudeIndex].target = [game.input.activePointer.x, game.input.activePointer.y];
-  }
+    // If the player is moving to another target position than the one in db
+    if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  Rooms.findOne({ players: Meteor.userId() }).playerPos[Meteor.userId()])) {
 
-  // if any of old and new target is null
-  if (dudes.children[myDudeIndex].oldTarget === null || dudes.children[myDudeIndex].target === null){
-    // if one of them isnt null (they are different)
-    if (dudes.children[myDudeIndex].oldTarget !== null || dudes.children[myDudeIndex].target !== null) {
-      // Send data to server about a new position
-      query = {
-        $set: {}
-      };
-      query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
-
-      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+      // Update position in db
+      Meteor.call('pushPos', [game.input.activePointer.x, game.input.activePointer.y]);
     }
-  // if it comes to this point, both variables must be arrays and can be compared as such
-  // chenk if they are different
-  } else if (! isSame(dudes.children[myDudeIndex].target, dudes.children[myDudeIndex].oldTarget)) {
-    // Send data to server about a new position
-    query = {
-      $set: {}
-    };
-    query.$set["playerPos." + Meteor.userId()] = dudes.children[myDudeIndex].target;
-
-    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
 
   dudes.children.forEach( function(dude) {
 
-    // grab the lastest target (for every dude) from the db
-    dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
 
-    // if any of oldTarget and target are null
-    if (dude.target === null || dude.oldTarget === null) {
-      // if target isnt null
-      if (dude.target !== null) {
-        // give the dude velocity towards his target point
+    if (! isSame(dude.target, Rooms.findOne({ players: dude.owner }).playerPos[dude.owner])) {
+      // grab the lastest target (for every dude) from the db
+      dude.target = Rooms.findOne({ players: dude.owner }).playerPos[dude.owner];
+
+      // if the dudes target has a target
+      if (! isSame(dude.target, [])) {
         moveToPos(dude, dude.target[0], dude.target[1]);
-      } /*else {
-        stopDude(dude);
-      }*/
-    // if this else if statement triggers, both values (target and oldTarget) are arrays and can be compared
-    } else if (! isSame(dude.target, dude.oldTarget)) {
-      // give the dude velocity towards his target point
-      moveToPos(dude, dude.target[0], dude.target[1]);
+      }
     }
 
     if (dude.moving) {
       dude.animations.play('walk');
-      if (dude.target) {
+      if (! isSame(dude.target, [])) {
         if (Phaser.Circle.contains(new Phaser.Circle(dude.body.x, dude.body.y, 10), dude.target[0], dude.target[1])) {
           stopDude(dude);
         }
       }
     }
-
-    // Set the oldTarget variable to the target as the last thing, for the next frame
-    dude.oldTarget = dude.target;
-  })
+  });
 }
 
 function stopDude(dude) {
   dude.body.setZeroVelocity();
-  dude.target = null;
+  Meteor.call('pushPos', []);
   dude.moving = false;
   dude.animations.stop('walk', true);
 }
@@ -249,7 +212,6 @@ function updateSpells() {
       nextFireTime = game.time.now + rangedSpellCooldown;
 
       // send data to db about the cast spell target points
-      // console.log("Sending data, X -> " + game.input.activePointer.x + " Y -> " + game.input.activePointer.y);
       query = {
         $set: {}
       };
@@ -297,6 +259,8 @@ function initSounds() {
 function isSame(array1, array2) {
   if (array1.length !== array2.length) {
     return false;
+  } else if (array1 === [] && array2 === []) {
+    return true;
   }
 
   return array1.every(function(element, index) {
