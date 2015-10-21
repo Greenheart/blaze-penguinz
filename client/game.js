@@ -106,6 +106,7 @@ function initDudes() {
     dude.moving = false;
     dude.casting = false;
     dude.target = [];
+    dude.spellTarget = [];
     dude.anchor.set(0.5);
     game.physics.ninja.enableCircle(dude, dude.radius);
     dude.body.checkCollision = true;
@@ -196,9 +197,18 @@ function spawnRangedSpell(dude, x, y) {
       fireballSFX.play();
       spell.animations.play('fly');
       moveByAngle(spell, angle);
+
+      query = {
+        $set: {}
+      };
+      query.$set["spellTarget." + Meteor.userId()] = [];
+      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+
+      dude.casting = false;
+
+      // Wait a bit before revelaing the spell on screen to avoid sprite collision between spell and player
       game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
         spell.alpha = 1;
-        dude.casting = false;
       });
     });
   }
@@ -223,26 +233,16 @@ function updateSpells() {
 
   dudes.children.forEach( function(dude) {
 
-    // get a spell target point from the database
-    var spellPos = Rooms.findOne({ players: dude.owner }).spellPos[dude.owner]
+    // If the position in the database is different than the one player has locally
+    if (! isSame(dude.spellTarget, Rooms.findOne({ players: dude.owner }).spellPos[dude.owner])) {
 
-    if (spellPos) {
-      // console.log("Recieveing data, X -> " + spellPos[0] + " Y -> " + spellPos[1]);
-    }
+      // Change the local target to the new one from the database
+      dude.spellTarget = Rooms.findOne({ players: dude.owner }).spellPos[dude.owner]
 
-    // if this point isnt null, spawn a spell for this dude with the proper target
-    if (spellPos) {
-
-      spawnRangedSpell(dude, spellPos[0], spellPos[1]);
-
-      // set the target point to null again after every client recieves the information
-      game.time.events.add(Phaser.Timer.SECOND * 0.1, function() {
-        query = {
-          $set: {}
-        };
-        query.$set["spellPos." + Meteor.userId()] = null;
-        Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
-      });
+      // If the local target now isnt empty, cast the spell
+      if (!isSame(dude.spellTarget, [])) {
+        spawnRangedSpell(dude, dude.spellTarget[0], dude.spellTarget[1]);
+      }
     }
   });
 }
