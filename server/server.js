@@ -11,11 +11,11 @@ Meteor.methods({
     var room = {
       players: [Meteor.userId()],
       playerTarget: {},
-      spellPos: {}
+      spellTarget: {}
     };
 
     room.playerTarget[Meteor.userId()] = [];
-    room.spellPos[Meteor.userId()] = [];
+    room.spellTarget[Meteor.userId()] = [];
     Rooms.insert(room);
 
     /*Rooms.insert({
@@ -29,7 +29,7 @@ Meteor.methods({
       $set: {}
     };
     query.$set["playerTarget." + Meteor.userId()] = [];
-    query.$set["spellPos." + Meteor.userId()] = [];
+    query.$set["spellTarget." + Meteor.userId()] = [];
 
     Rooms.update(roomId, query);
   },

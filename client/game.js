@@ -83,7 +83,7 @@ function moveByAngle (object, angle) {
 
 function initDudes() {
   // Get all playerIds from the room that this game starts in
-  players = Rooms.findOne({ players: Meteor.userId() }).players;
+  var players = Rooms.findOne({ players: Meteor.userId() }).players;
   // Create the physical (ingame) group for all the playes
   dudes = game.add.group();
   // Make as many physical group objects as there are players
@@ -176,40 +176,37 @@ function initRangedSpells(amount) {
 function spawnRangedSpell(dude, x, y) {
   // create a new spell-obj
 
-  // check one extra time if the player isnt already casting a spell
-  if (!dude.casting) {
-    dude.casting = true;
-    stopDude(dude);
+  dude.casting = true;
+  stopDude(dude);
 
-    var spell = rangedSpells.getFirstDead();
-    spell.alpha = 0;
-    spell.owner = dude;
-    spell.reset(dude.body.x, dude.body.y);
+  var spell = rangedSpells.getFirstDead();
+  spell.alpha = 0;
+  spell.owner = dude;
+  spell.reset(dude.body.x, dude.body.y);
 
-    //rotate player to the correct firing-angle
-    angle = game.physics.arcade.angleToXY(spell, x, y)
-    dude.rotation = angle;
+  //rotate player to the correct firing-angle
+  var angle = game.physics.arcade.angleToXY(spell, x, y);
+  dude.rotation = angle;
 
-    //simple (and still buggy) casting time
-    game.time.events.add(Phaser.Timer.SECOND * 0.5, function() {
-      fireballSFX.play();
-      spell.animations.play('fly');
-      moveByAngle(spell, angle);
+  //add a small casttime before casting the spell
+  game.time.events.add(Phaser.Timer.SECOND * 0.1, function() {
+    fireballSFX.play();
+    spell.animations.play('fly');
+    moveByAngle(spell, angle);
 
-      var query = {
-        $set: {}
-      };
-      query.$set["spellTarget." + Meteor.userId()] = [];
-      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+    var query = {
+      $set: {}
+    };
+    query.$set["spellTarget." + Meteor.userId()] = [];
+    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
 
-      dude.casting = false;
+    dude.casting = false;
 
-      // Wait a bit before revelaing the spell on screen to avoid sprite collision between spell and player
-      game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
-        spell.alpha = 1;
-      });
+    // Wait a bit before revelaing the spell on screen to avoid sprite collision between spell and player
+    game.time.events.add(Phaser.Timer.SECOND * 0.02, function() {
+      spell.alpha = 1;
     });
-  }
+  });
 }
 function updateSpells() {
 
@@ -223,7 +220,7 @@ function updateSpells() {
       var query = {
         $set: {}
       };
-      query.$set["spellPos." + Meteor.userId()] = [game.input.activePointer.x, game.input.activePointer.y];
+      query.$set["spellTarget." + Meteor.userId()] = [game.input.activePointer.x, game.input.activePointer.y];
       Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
 
     }
@@ -232,14 +229,16 @@ function updateSpells() {
   dudes.children.forEach( function(dude) {
 
     // If the position in the database is different than the one player has locally
-    if (! isSame(dude.spellTarget, Rooms.findOne({ players: dude.owner }).spellPos[dude.owner])) {
+    if (! isSame(dude.spellTarget, Rooms.findOne({ players: dude.owner }).spellTarget[dude.owner])) {
 
       // Change the local target to the new one from the database
-      dude.spellTarget = Rooms.findOne({ players: dude.owner }).spellPos[dude.owner]
+      dude.spellTarget = Rooms.findOne({ players: dude.owner }).spellTarget[dude.owner]
 
-      // If the local target now isnt empty, cast the spell
-      if (!isSame(dude.spellTarget, [])) {
-        spawnRangedSpell(dude, dude.spellTarget[0], dude.spellTarget[1]);
+      // If there is a local spellTarget
+      if (! isSame(dude.spellTarget, [])) {
+        if (! dude.casting) {
+          spawnRangedSpell(dude, dude.spellTarget[0], dude.spellTarget[1]);
+        }
       }
     }
   });
@@ -257,8 +256,6 @@ function initSounds() {
 function isSame(array1, array2) {
   if (array1.length !== array2.length) {
     return false;
-  } else if (array1 === [] && array2 === []) {
-    return true;
   }
 
   return array1.every(function(element, index) {
