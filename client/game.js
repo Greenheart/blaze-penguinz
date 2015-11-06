@@ -52,13 +52,13 @@ function update() {
   updateSpells();
 }
 
-function render() {/*
+function render() {
   dudes.forEach(function(dude) {
     game.debug.body(dude);
   });
   rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
-  });*/
+  });
 }
 
 //--------------------------------------------------GENERAL---------------------------------------------------
@@ -77,6 +77,14 @@ function moveByAngle (object, angle) {
   angleDeg = angle * (180/Math.PI);
   object.rotation = angle;
   object.body.moveTo(object.moveSpeed, angleDeg);
+}
+
+function collisionCircleCircle (a, b) {
+  /* Detect if two circlular bodies collide */
+  if (Math.pow(Math.abs(b.x - a.x), 2) + Math.pow(Math.abs(a.y - b.y), 2) <= Math.pow(a.radius + b.radius, 2)) {
+    return true;
+  }
+  return false;
 }
 
 //-----------------------------------------------------DUDES------------------------------------------------------------
@@ -136,6 +144,18 @@ function updateDudes() {
       if (! isSame(dude.target, [])) {
         moveToPos(dude, dude.target[0], dude.target[1]);
       }
+    }
+
+    //console.log(dude.owner, dudes.children[myDudeIndex].owner, dude.owner !== dudes.children[myDudeIndex].owner);
+    if (dude.owner !== dudes.children[myDudeIndex].owner &&
+        collisionCircleCircle(dudes.children[myDudeIndex], dude)) {
+      // let dudes affect each other
+
+      /*TODO: implement collision handling here --> make players push each other
+              depending on their speed and angle upon collision */
+      stopDude(dude);
+      stopDude(dudes.children[myDudeIndex]);
+      console.log("collision!");
     }
 
     if (dude.moving) {
