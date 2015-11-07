@@ -49,11 +49,11 @@ function create() {
 
 function update() {
   updateDudes();
-  updateSpells();
+  updateRangedSpells();
 }
 
 function render() {
-  dudes.forEach(function(dude) {
+  dudes.forEachAlive(function(dude) {
     game.debug.body(dude);
   });
   rangedSpells.forEachAlive(function(spell) {
@@ -87,19 +87,30 @@ function collisionCircleCircle (a, b) {
   return false;
 }
 
+function isSame(array1, array2) {
+  if (array1.length !== array2.length) {
+    return false;
+  }
+
+  return array1.every(function(element, index) {
+    // check if every elem of arr1 is in arr2 on same position
+    return element === array2[index];
+  });
+}
+
 //-----------------------------------------------------DUDES------------------------------------------------------------
 
 function initDudes() {
   // Get all playerIds from the room that this game starts in
-  var players = Rooms.findOne({ players: Meteor.userId() }).players;
+  var room = Rooms.findOne({ players: Meteor.userId() });
   // Create the physical (ingame) group for all the playes
   dudes = game.add.group();
   // Make as many physical group objects as there are players
-  dudes.createMultiple(players.length, 'penguins');
+  dudes.createMultiple(room.players.length, 'penguins');
 
   dudes.forEach(function(dude) {
-    dude.username = Meteor.users.findOne({ _id: players[dude.z -1] });
-    dude.owner = Meteor.users.findOne({ _id: players[dude.z - 1] })._id;
+    dude.username = Meteor.users.findOne({ _id: room.players[dude.z -1] });
+    dude.owner = Meteor.users.findOne({ _id: room.players[dude.z - 1] })._id;
 
     if (dude.owner === Meteor.userId()) {
       myDudeIndex = dude.z - 1;
@@ -110,6 +121,7 @@ function initDudes() {
     dude.alive = true;
     dude.moveSpeed = 300;
     dude.radius = 20;
+    dude.health = room.playerHealth[room.players[dude.z - 1]];
     dude.moving = false;
     dude.casting = false;
     dude.target = [];
@@ -133,8 +145,10 @@ function updateDudes() {
     }
   }
 
-  dudes.children.forEach( function(dude) {
+  dudes.forEachAlive( function(dude) {
 
+    // update each dude's health with latest value from db
+    dude.health = Rooms.findOne({ players: dude.owner }).playerHealth[dude.owner];
 
     if (! isSame(dude.target, Rooms.findOne({ players: dude.owner }).playerTarget[dude.owner])) {
       // grab the lastest target (for every dude) from the db
@@ -146,17 +160,37 @@ function updateDudes() {
       }
     }
 
-    //console.log(dude.owner, dudes.children[myDudeIndex].owner, dude.owner !== dudes.children[myDudeIndex].owner);
-    if (dude.owner !== dudes.children[myDudeIndex].owner &&
-        collisionCircleCircle(dudes.children[myDudeIndex], dude)) {
-      // let dudes affect each other
+    // Only check collisions against others than self
+    if (dude.owner !== Meteor.userId()) {
 
-      /*TODO: implement collision handling here --> make players push each other
-              depending on their speed and angle upon collision */
-      stopDude(dude);
-      stopDude(dudes.children[myDudeIndex]);
-      console.log("collision!");
+      //NOTE: might be an issue here with collision detection for dead penguins --> make sure to only check for alive pengZ
+
+      // Check player-player - collisions
+      if (collisionCircleCircle(dudes.children[myDudeIndex], dude)) {
+        /*TODO: implement proper collision handling here --> make players push each other
+                depending on their speed and angle upon collision */
+        stopDude(dude);
+        stopDude(dudes.children[myDudeIndex]);
+        console.log("player-player-collision!");
+      }
     }
+
+    rangedSpells.forEachAlive(function(spell) {
+      // Check player-spell - collisions
+      if (spell.owner !== dude.owner &&
+          collisionCircleCircle(dude, spell)) {
+        console.log("player-spell-collision!");
+
+        spell.kill(); // maybe set a timeout before killing the spell obj and give a feeling of a greater pushback?
+        // TODO: collisions should push players around and not just kill them
+
+        // only report your own damage to not have all clients send data
+        if (dude.owner === Meteor.userId()) {
+          console.log("taking damage");
+          Meteor.call("takeDamage", 1);
+        }
+      }
+    });
 
     if (dude.moving) {
       dude.animations.play('walk');
@@ -184,7 +218,8 @@ function initRangedSpells(amount) {
   rangedSpells.setAll('checkWorldBounds', true);
   rangedSpells.setAll('outOfBoundsKill', true);
   rangedSpells.forEach(function(spell) {
-    game.physics.ninja.enableCircle(spell, 10);
+    spell.radius = 10;
+    game.physics.ninja.enableCircle(spell, spell.radius);
     spell.body.collideWorldBounds = false;
     spell.animations.add('fly', [0, 1, 2, 3, 4], 15, true);
     spell.anchor.set(0.8, 0.5);
@@ -193,6 +228,8 @@ function initRangedSpells(amount) {
     spell.owner = null;
   });
 }
+
+
 function spawnRangedSpell(dude, x, y) {
   // create a new spell-obj
 
@@ -201,7 +238,7 @@ function spawnRangedSpell(dude, x, y) {
 
   var spell = rangedSpells.getFirstDead();
   spell.alpha = 0;
-  spell.owner = dude;
+  spell.owner = dude.owner;
   spell.reset(dude.body.x, dude.body.y);
 
   //rotate player to the correct firing-angle
@@ -228,7 +265,9 @@ function spawnRangedSpell(dude, x, y) {
     });
   });
 }
-function updateSpells() {
+
+
+function updateRangedSpells() {
 
   if (game.input.activePointer.leftButton.isDown && !dudes.children[myDudeIndex].casting) {
     if (game.time.now > nextFireTime) {
@@ -246,13 +285,13 @@ function updateSpells() {
     }
   }
 
-  dudes.children.forEach( function(dude) {
+  dudes.forEachAlive( function(dude) {
 
     // If the position in the database is different than the one player has locally
     if (! isSame(dude.spellTarget, Rooms.findOne({ players: dude.owner }).spellTarget[dude.owner])) {
 
       // Change the local target to the new one from the database
-      dude.spellTarget = Rooms.findOne({ players: dude.owner }).spellTarget[dude.owner]
+      dude.spellTarget = Rooms.findOne({ players: dude.owner }).spellTarget[dude.owner];
 
       // If there is a local spellTarget
       if (! isSame(dude.spellTarget, [])) {
@@ -260,6 +299,19 @@ function updateSpells() {
           spawnRangedSpell(dude, dude.spellTarget[0], dude.spellTarget[1]);
         }
       }
+    }
+
+    // check if player still is alive
+    if (dude.health <= 0) {
+      dude.kill();
+
+      if (dude.owner === Meteor.userId()) {
+        // window.alert("You got pWned! ");
+        // TODO: display message to player who got killed
+        //          --> possibly by showing a message-box in the UI in client.js-file
+      }
+      //TODO: play animation, play sound or something
+      // also add score to player who got the kill
     }
   });
 }
@@ -270,16 +322,4 @@ function initSounds() {
   fireballSFX = game.add.audio('fireballSFX', 0.5);
   music = game.add.audio('music', 1, true);
   music.play();
-}
-
-
-function isSame(array1, array2) {
-  if (array1.length !== array2.length) {
-    return false;
-  }
-
-  return array1.every(function(element, index) {
-    // check if every elem of arr1 is in arr2 on same position
-    return element === array2[index];
-  });
 }
