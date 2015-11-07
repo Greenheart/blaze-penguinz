@@ -141,7 +141,7 @@ function updateDudes() {
     if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  Rooms.findOne({ players: Meteor.userId() }).playerTarget[Meteor.userId()])) {
 
       // Update position in db
-      Meteor.call('pushPos', [game.input.activePointer.x, game.input.activePointer.y]);
+      Meteor.call('updatePlayerTarget', [game.input.activePointer.x, game.input.activePointer.y]);
     }
   }
 
@@ -163,14 +163,19 @@ function updateDudes() {
     // Only check collisions against others than self
     if (dude.owner !== Meteor.userId()) {
 
-      //NOTE: might be an issue here with collision detection for dead penguins --> make sure to only check for alive pengZ
-
       // Check player-player - collisions
       if (collisionCircleCircle(dudes.children[myDudeIndex], dude)) {
         /*TODO: implement proper collision handling here --> make players push each other
                 depending on their speed and angle upon collision */
-        stopDude(dude);
-        stopDude(dudes.children[myDudeIndex]);
+        if (dudes.children[myDudeIndex].alive) {
+          // only affect other players when the current player is alive
+        //TODO:   change this collision detection to handle any two penguins and
+        //          not always compare against the curent player
+        //        Right now the third and the second player can't collide since
+        //          we always check against the first (current player)
+          stopDude(dude);
+          stopDude(dudes.children[myDudeIndex]);
+        }
         console.log("player-player-collision!");
       }
     }

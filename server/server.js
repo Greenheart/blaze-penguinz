@@ -39,7 +39,7 @@ Meteor.methods({
   removeRoom: function(roomId) {
     Rooms.remove({ _id: roomId });
   },
-  pushPos: function(position) {
+  updatePlayerTarget: function(position) {
     var query = {
       $set: {}
     };
