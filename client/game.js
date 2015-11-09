@@ -5,6 +5,7 @@ var nextFireTime = 0;
 var dudeAnimFrames = [[0,1,2,3], [4,5,6,7], [8,9,10,11], [12,13,14,15], [16,17,18,19]]
 var myDudeIndex = null;
 
+//NOTE: maybe move this to client.js to keep UI-code in one place?
 Template.body.helpers({
   'game': function() {
     game = new Phaser.Game(1280, 720, Phaser.AUTO, 'container',
@@ -53,12 +54,14 @@ function update() {
 }
 
 function render() {
+  /*
   dudes.forEachAlive(function(dude) {
     game.debug.body(dude);
   });
   rangedSpells.forEachAlive(function(spell) {
     game.debug.body(spell);
   });
+  */
 }
 
 //--------------------------------------------------GENERAL---------------------------------------------------
@@ -101,44 +104,112 @@ function isSame(array1, array2) {
 //-----------------------------------------------------DUDES------------------------------------------------------------
 
 function initDudes() {
-  // Get all playerIds from the room that this game starts in
+  // init all characthers on a client. Charachters for players who haven't joined yet will
+  // be out of gameplay until their owners join
+
+  // Get room where the current player is
   var room = Rooms.findOne({ players: Meteor.userId() });
-  // Create the physical (ingame) group for all the playes
   dudes = game.add.group();
-  // Make as many physical group objects as there are players
-  dudes.createMultiple(room.players.length, 'penguins');
+  dudes.createMultiple(ROOM_MAX_PLAYERS, 'penguins');
 
   dudes.forEach(function(dude) {
-    dude.username = Meteor.users.findOne({ _id: room.players[dude.z -1] });
-    dude.owner = Meteor.users.findOne({ _id: room.players[dude.z - 1] })._id;
 
-    if (dude.owner === Meteor.userId()) {
-      myDudeIndex = dude.z - 1;
-    }
+    // log info about positioning and target --> debug only
+    //console.log("player " + dude.z + " - ", room.playerTarget[room.players[dude.z - 1]], "[]", !isSame(room.playerTarget[room.players[dude.z - 1]], []));
 
-    dude.animations.add('walk', dudeAnimFrames[dude.z -1], 15, true);
-    dude.reset(game.world.centerX, game.world.centerY);
-    dude.alive = true;
+    //TODO: fix the default positioning to place pengz in a cirlcle around some point in the world
+
+    /*
+    var defaultRadius = 100;
+    var offset = 400;
+    var defaultPos = [  // position players in a circle around the world center (with offset that can be removed)
+      game.world.centerX - offset + defaultRadius * Math.cos(dude.z * (360 / ROOM_MAX_PLAYERS)),  // X
+      game.world.centerY - offset + defaultRadius * Math.sin(dude.z * (360 / ROOM_MAX_PLAYERS))   // Y
+    ];
+
+    dude.reset(defaultPos[0], defaultPos[1]);
+    dude.target = defaultPos;
+    console.log("Defualt position & target  -->  X:" + defaultPos[0] + "  Y:" + defaultPos[1]);
+    */
+
+    dude.animations.add('walk', dudeAnimFrames[dude.z -1], 10, true);
     dude.moveSpeed = 300;
     dude.radius = 20;
-    dude.health = room.playerHealth[room.players[dude.z - 1]];
     dude.moving = false;
     dude.casting = false;
-    dude.target = [];
     dude.spellTarget = [];
     dude.anchor.set(0.5);
     game.physics.ninja.enableCircle(dude, dude.radius);
     dude.body.checkCollision = true;
     dude.body.collideWorldBounds = true;
+
+    // this statement makes sure to only add last properties to characthers of active players
+    if ((dude.z - 1) < room.players.length) {
+      console.log("creating active dude");
+
+      dude.alive = true;
+      dude.username = Meteor.users.findOne({ _id: room.players[dude.z - 1] }).username;
+      dude.owner = Meteor.users.findOne({ _id: room.players[dude.z - 1] })._id;
+      dude.hp = room.playerHP[room.players[dude.z - 1]];
+
+      if (dude.owner === Meteor.userId()) {
+        myDudeIndex = dude.z - 1; // gives each client easy access to their own dude
+      }
+
+      if (! isSame(room.playerTarget[room.players[dude.z - 1]], [])) {
+        // use position and target from DB if possible
+        console.log("position & target FROM DATABASE  -->  X: " +  room.playerTarget[room.players[dude.z - 1]][0] + "  Y: " + room.playerTarget[room.players[dude.z - 1]][1]);
+        dude.reset(room.playerTarget[room.players[dude.z - 1]][0], room.playerTarget[room.players[dude.z - 1]][1]);
+        dude.target = room.playerTarget[room.players[dude.z - 1]];
+      } else {
+        // TODO: use default position
+        dude.reset(game.world.centerX, game.world.centerY);
+        dude.target = [];
+      }
+
+    } else {
+      console.log("creating dead dude");
+      // if player isnt in room yet --> make his/hers characther dead --> will not show it in game
+      dude.alive = false;
+      dude.x = game.world.centerX;
+      dude.y = game.world.centerY;
+      dude.target = [];
+    }
   });
 }
 
-function updateDudes() {
+//TODO:
+/*
+Clients now show recently connected players properly.
 
-  // Change the target of this players dude if requested and possible
+This required some changes to how the game initiates the player-objects.
+Instead of createing a new object every time a player joins, all objects will be initiated when a client start the game and then later customized when players join.
+Another addition is that a client now observes changes to the room.players-array to be able add new players as soon as they join.
+*/
+
+initNewPlayer = function() { //defining func this way to make func accesible in client.js
+  // init new player's characthers so players already in game can see them too.
+  var room = Rooms.findOne({ players: Meteor.userId() });
+  var i = room.players.length - 1;  // allows us to start at the first dude that's not yet initiated
+  var dude = dudes.children[i];
+
+  dude.alive = true;
+  dude.hp = room.playerHP[room.players[i]];
+  dude.username = Meteor.users.findOne({ _id: room.players[i] }).username;  // username of owner
+  dude.owner = room.players[i]; // ID of owner
+  dude.reset(dude.x, dude.y);
+
+  console.log("Player " + (dude.z) + " - " + dude.username + " joined the game!");
+}
+
+function updateDudes() {
+  // update dudes in the room of the client's player
+  var room = Rooms.findOne({ players: Meteor.userId() });
+
+  // Change the target of the current player's dude if requested and possible
   if (game.input.activePointer.rightButton.isDown && !dudes.children[myDudeIndex].casting) {
     // If the player is moving to another target position than the one in db
-    if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  Rooms.findOne({ players: Meteor.userId() }).playerTarget[Meteor.userId()])) {
+    if (! isSame([game.input.activePointer.x, game.input.activePointer.y],  room.playerTarget[Meteor.userId()])) {
 
       // Update position in db
       Meteor.call('updatePlayerTarget', [game.input.activePointer.x, game.input.activePointer.y]);
@@ -148,7 +219,7 @@ function updateDudes() {
   dudes.forEachAlive( function(dude) {
 
     // update each dude's health with latest value from db
-    dude.health = Rooms.findOne({ players: dude.owner }).playerHealth[dude.owner];
+    dude.hp = room.playerHP[dude.owner];
 
     if (! isSame(dude.target, Rooms.findOne({ players: dude.owner }).playerTarget[dude.owner])) {
       // grab the lastest target (for every dude) from the db
@@ -188,6 +259,8 @@ function updateDudes() {
 
         spell.kill(); // maybe set a timeout before killing the spell obj and give a feeling of a greater pushback?
         // TODO: collisions should push players around and not just kill them
+        // maybe change physics system to ARCADE and just use custom bodies based on the dude.radius-property
+        //    the basics of the collision-detection is implemented
 
         // only report your own damage to not have all clients send data
         if (dude.owner === Meteor.userId()) {
@@ -290,6 +363,8 @@ function updateRangedSpells() {
     }
   }
 
+  var room = Rooms.findOne({ players: Meteor.userId() });
+
   dudes.forEachAlive( function(dude) {
 
     // If the position in the database is different than the one player has locally
@@ -307,7 +382,7 @@ function updateRangedSpells() {
     }
 
     // check if player still is alive
-    if (dude.health <= 0) {
+    if (dude.hp <= 0) {
       dude.kill();
 
       if (dude.owner === Meteor.userId()) {
@@ -321,7 +396,7 @@ function updateRangedSpells() {
   });
 }
 
-//--------------------------------------------------INITS----------------------------------------------------
+//--------------------------------------------------SOUNDS----------------------------------------------------
 
 function initSounds() {
   fireballSFX = game.add.audio('fireballSFX', 0.5);

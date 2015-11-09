@@ -2,6 +2,11 @@ Meteor.publish('rooms', function() {
   return Rooms.find();
 });
 Meteor.publish('users', function() {
+  //TODO: fix this to only publish
+  /*
+      1. username
+      2. userId's
+  */
   return Meteor.users.find();
 });
 
@@ -12,18 +17,13 @@ Meteor.methods({
       players: [Meteor.userId()],
       playerTarget: {},
       spellTarget: {},
-      playerHealth: {}
+      playerHP: {}
     };
 
     room.playerTarget[Meteor.userId()] = [];
     room.spellTarget[Meteor.userId()] = [];
-    room.playerHealth[Meteor.userId()] = 100;
+    room.playerHP[Meteor.userId()] = 100;
     Rooms.insert(room);
-
-    /*Rooms.insert({
-      players: [Meteor.userId()],
-      playerTarget: { Meteor.userId() : [x, y] }
-    });*/
   },
   joinRoom: function(roomId) {
     var query = {
@@ -32,7 +32,7 @@ Meteor.methods({
     };
     query.$set["playerTarget." + Meteor.userId()] = [];
     query.$set["spellTarget." + Meteor.userId()] = [];
-    query.$set["playerHealth." + Meteor.userId()] = 100;
+    query.$set["playerHP." + Meteor.userId()] = 100;
 
     Rooms.update(roomId, query);
   },
@@ -57,12 +57,12 @@ Meteor.methods({
     }
 
     if (type === 1) {
-      var dmg = -33;
+      var dmg = RANGED_SPELL_DMG;
     } else if (type === 2) {
-      var dmg = -DAMAGE_PER_SECOND;
+      var dmg = DAMAGE_PER_SECOND;
     }
 
-    query.$inc["playerHealth." + Meteor.userId()] = dmg;
+    query.$inc["playerHP." + Meteor.userId()] = dmg;
     Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
 });
