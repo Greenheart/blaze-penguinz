@@ -17,20 +17,7 @@ Template.body.helpers({
 Template.lobby.events({
   'click #play': function(event) {
     event.preventDefault();
-    if (Rooms.findOne()){
-      if (Rooms.findOne({ players: { $nin: [Meteor.userId()]} })) {
-        Meteor.call('joinRoom', Rooms.findOne()._id, function() {
-          // callback when room is joined
-          startRoomUpdateHandler();
-        });
-      }
-    } else {
-      Meteor.call('addRoom', function() {
-        // callback when room is created and joined
-        startRoomUpdateHandler();
-      });
-    }
-    Session.set("inGame", true);
+    Meteor.call("joinRoom");
   }
 });
 

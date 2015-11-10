@@ -12,32 +12,60 @@ Meteor.publish('users', function() {
 
 
 Meteor.methods({
-  addRoom: function() {
-    var room = {
-      players: [Meteor.userId()],
-      playerTarget: {},
-      spellTarget: {},
-      playerHP: {}
-    };
+// ------------------------------ ROOM METHODS ---------------------------------
 
-    room.playerTarget[Meteor.userId()] = [];
-    room.spellTarget[Meteor.userId()] = [];
-    room.playerHP[Meteor.userId()] = 100;
-    Rooms.insert(room);
-  },
-  joinRoom: function(roomId) {
-    var query = {
-      $push: { players: Meteor.userId()},
-      $set: {}
-    };
-    query.$set["playerTarget." + Meteor.userId()] = [];
-    query.$set["spellTarget." + Meteor.userId()] = [];
-    query.$set["playerHP." + Meteor.userId()] = 100;
-
-    Rooms.update(roomId, query);
+  joinRoom: function() {
+    /*
+    Find a room with available slots and add the current player to it
+    */
+    var room = Rooms.findOne({
+      players: {
+        $nin: [Meteor.userId()],  // only allow players to join a room once
+        $not: {
+          $size: ROOM_MAX_PLAYERS // only find rooms that aren't full
+        }
+      }
+    });
+    if (room) {
+      addToRoom(room._id);
+    } else {
+      createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+    }
   },
   removeRoom: function(roomId) {
     Rooms.remove({ _id: roomId });
+  },
+
+
+
+// ----------------------------- GAME METHODS ----------------------------------
+
+  startGame: function() {
+    /*
+    Make a room ready for a game by setting default values
+
+    Will only allow the room host to start the game
+    */
+
+
+    //NOTE: might be worth to restrict this method to only work if room has a certain number of users (Full room?)
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    // only allow the host --> room.players[0] to start the game
+    if (room.players[0] === Meteor.userId()) {
+      console.log("starting game in room " + room._id);
+      var query = {
+        $set: {}
+      };
+
+      // set default values for each player
+      room.players.forEach(function(user) {
+        query.$set["playerTarget." + user] = [];
+        query.$set["spellTarget." + user] = [];
+        query.$set["playerHP." + user] = 100;
+      });
+
+      Rooms.update(roomId, query);
+    }
   },
   updatePlayerTarget: function(position) {
     var query = {
@@ -49,7 +77,8 @@ Meteor.methods({
   },
   takeDamage: function(type) {
     /*
-    update the health of the current player
+    Update the health of the current player
+
     type: Integer storing type of damage taken --> Either ranged spell hit (1) or damage per second (2)
     */
     var query = {
@@ -66,3 +95,45 @@ Meteor.methods({
     Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }
 });
+
+
+
+// ------------------------------ ROOM HELPERS ---------------------------------
+
+function addToRoom(roomId) {
+  /*
+  Add the current player to a specific room
+  */
+  console.log("adding " + Meteor.userId() + " to room " + roomId);
+
+  Rooms.update(roomId, {
+    $push: {
+      players: Meteor.userId()
+    }
+  });
+}
+
+function createRoom(addUser) {
+  /*
+  Create a new empty room
+
+  addUser: Boolean flag --> Should we also add the current user to the newly created room?
+  */
+  var room = {
+    players: [],
+    playerTarget: {},
+    playerHP: {},
+    spellTarget: {}
+  }
+
+  Rooms.insert(room, function(err, roomInserted) {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log("creating new room: " + roomInserted);
+      if (addUser) {
+        addToRoom(roomInserted);
+      }
+    }
+  });
+}
