@@ -1,4 +1,5 @@
 Meteor.publish('rooms', function() {
+  //TODO: more secure version (add on deployment) --> return Rooms.find({ players: Meteor.userId });
   return Rooms.find();
 });
 Meteor.publish('users', function() {
@@ -6,8 +7,22 @@ Meteor.publish('users', function() {
   /*
       1. username
       2. userId's
+      3. rating
+      4. friendlist --> only your own
   */
   return Meteor.users.find();
+});
+
+Accounts.onCreateUser(function(options, user) {
+  // Add a custom profile to every user that signs up
+  if (options.profile) {
+    user.profile = options.profile
+  } else {
+    user.profile = {};
+  }
+  user.profile.friends = [];
+  user.profile.rating = 1000;
+  return user;
 });
 
 
@@ -18,6 +33,13 @@ Meteor.methods({
     /*
     Find a room with available slots and add the current player to it
     */
+
+    // Only allow players to join one room at a time
+    //TODO: Also add a check like this on the client, to inactivate the join-button or something when a room is joined
+    if (Rooms.findOne({ players: Meteor.userId() })) {
+      return;
+    }
+
     var room = Rooms.findOne({
       players: {
         $nin: [Meteor.userId()],  // only allow players to join a room once
@@ -26,6 +48,7 @@ Meteor.methods({
         }
       }
     });
+
     if (room) {
       addToRoom(room._id);
     } else {
