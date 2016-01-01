@@ -24,6 +24,26 @@ Template.lobby.events({
   'click .partyMatch': function(event) {
     event.preventDefault();
     Meteor.call("joinRoom");
+  },
+  'submit .addform': function(event) {
+    event.preventDefault();
+
+    var input = $('[name="addfriend"]').val();
+
+		if (input.length > 2 && input.length < USERNAME_MAX_LEN) {
+      Meteor.call("addFriend", {
+      	username: input
+      },
+      function(err, res) {
+      	if (res) {
+          inputError(res);
+        }
+      });
+    } else if (input.length > USERNAME_MAX_LEN) {
+      inputError("The name is too long");
+    } else {
+    	inputError("The name is too short");
+    }
   }
 });
 
@@ -102,3 +122,11 @@ Template.lobby.helpers({
     return false;
   }
 });
+
+
+//------------------------------ GENERAL HELPERS -------------------------------
+
+function inputError(msg) {
+  // Alert users about errors
+  alert(msg);
+}

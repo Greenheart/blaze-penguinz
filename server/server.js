@@ -85,63 +85,83 @@ Meteor.methods({
 
   // ----------------------------- GAME METHODS ----------------------------------
 
-    startGame: function() {
-      /*
-      Make a room ready for a game by setting default values
+  startGame: function() {
+    /*
+    Make a room ready for a game by setting default values
 
-      Will only allow the room host (players[0]) to start the game
-      */
+    Will only allow the room host (players[0]) to start the game
+    */
 
-      var room = Rooms.findOne({ players: Meteor.userId() });
-      // only allow the host --> room.players[0] to start the game
-      //TODO: test that this works --> Make sure there are at least 2 players in the room to begin the match
-      if (room.players[0] === Meteor.userId() && room.players.length >= 2) {
-        console.log("starting game in room " + room._id);
-        var query = {
-          $set: {
-            inGame: true
-          }
-        };
-
-        //TODO: add default positions in a circle around the center coordinate in the world
-        // check some early episode of 'Coding Math' trigonometry on youtube for implementation
-
-        // set default values for each player
-        room.players.forEach(function(userId) {
-          query.$set["playerTarget." + userId] = [];
-          query.$set["spellTarget." + userId] = [];
-          query.$set["playerHP." + userId] = 100;
-        });
-
-        Rooms.update(roomId, query);
-      }
-    }/*,
-    updatePlayerTarget: function(position) {
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    // only allow the host --> room.players[0] to start the game
+    //TODO: test that this works --> Make sure there are at least 2 players in the room to begin the match
+    if (room.players[0] === Meteor.userId() && room.players.length >= 2) {
+      console.log("starting game in room " + room._id);
       var query = {
-        $set: {}
+        $set: {
+          inGame: true
+        }
       };
 
-      query.$set["playerTarget." + Meteor.userId()] = position;
-      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
-    },
-    takeDamage: function(type) {
-      /*
-      Update the health of the current player
+      //TODO: add default positions in a circle around the center coordinate in the world
+      // check some early episode of 'Coding Math' trigonometry on youtube for implementation
 
-      type: Integer storing type of damage taken --> Either ranged spell hit (1) or damage per second (2)
-      *\/
-      var query = {
-        $inc: {}
+      // set default values for each player
+      room.players.forEach(function(userId) {
+        query.$set["playerTarget." + userId] = [];
+        query.$set["spellTarget." + userId] = [];
+        query.$set["playerHP." + userId] = 100;
+      });
+
+      Rooms.update(roomId, query);
+    }
+  },
+  addFriend: function(query) {
+  	//search for user with username in query.username
+
+    var user = Meteor.users.findOne(query, {
+      fields: {
+        username: 1
       }
+    });
 
-      if (type === 1) {
-        var dmg = RANGED_SPELL_DMG;
-      } else if (type === 2) {
-        var dmg = DAMAGE_PER_SECOND;
-      }
+    if (user) {
+    	Meteor.users.update({ _id: Meteor.userId() }, {
+      	$push: {
+        	'profile.friends': user._id
+        }
+      });
 
-      query.$inc["playerHP." + Meteor.userId()] = dmg;
-      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+    } else {
+      return "Couldn't find "+query.username;
+    }
+  }/*,
+  updatePlayerTarget: function(position) {
+    var query = {
+      $set: {}
+    };
+
+    query.$set["playerTarget." + Meteor.userId()] = position;
+    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+  },
+  takeDamage: function(type) {
+    /*
+    Update the health of the current player
+
+    type: Integer storing type of damage taken --> Either ranged spell hit (1) or damage per second (2)
+    *\/
+    var query = {
+      $inc: {}
+    }
+
+    if (type === 1) {
+      var dmg = RANGED_SPELL_DMG;
+    } else if (type === 2) {
+      var dmg = DAMAGE_PER_SECOND;
+    }
+
+    query.$inc["playerHP." + Meteor.userId()] = dmg;
+    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
   }*/
 });
 
