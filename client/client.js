@@ -30,6 +30,23 @@ Template.lobby.events({
 
     var input = $('[name="addfriend"]').val();
 
+    console.log(Meteor.users.findOne);
+
+    if (input === Meteor.user().username) {
+      inputError("You can't add yourself");
+      return;
+    }
+    var user = Meteor.users.findOne({username: input});
+    if (user && Meteor.user().profile.friends.indexOf(user._id) > -1) {
+      inputError("You're already friends with "+input+"!");
+      return;
+    }
+
+    //NOTE: The checks above won't stop usernames that don't exist, but the most performant way
+    //      to check for this case is to let the server handle it --> not to publish all usernames
+    //      to all clients and let them check if the username exists or not since that would require
+    //      a lot of data to be sent back and forth
+
 		if (input.length > 2 && input.length < USERNAME_MAX_LEN) {
       Meteor.call("addFriend", {
       	username: input
