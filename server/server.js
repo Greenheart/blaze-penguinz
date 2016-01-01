@@ -1,22 +1,43 @@
 Meteor.publish('rooms', function() {
   //TODO: more secure version (add on deployment) --> return Rooms.find({ players: Meteor.userId });
   return Rooms.find();
+
 });
-Meteor.publish('users', function() {
-  //TODO: fix this to only publish
-  /*
-      1. username
-      2. userId's
-      3. rating
-      4. friendlist --> only your own
-  */
-  return Meteor.users.find();
+
+Meteor.publish('currentUser', function() {
+  return Meteor.users.find({}, {
+    fields: {
+      'status.online': 1,
+      'profile': 1,      // Includes 'profile.friends' to allow current user to see their friendlist
+      'username': 1
+    }
+  })
 });
+
+Meteor.publish('otherUsers', function() {
+  return Meteor.users.find({}, {
+    fields: { // only publish these fields (+ '_id')
+      'status.online': 1,
+      'profile.rating': 1,
+      'username': 1
+    }
+  });
+});
+
+
+
+/*
+TODO:
+
+* Allow users to switch between 'Friends' and 'Online Users' in the left sidebar
+  * https://stackoverflow.com/questions/29425906/how-can-i-create-a-list-of-online-active-users
+  * ^ Examples of code that solves this
+*/
 
 Accounts.onCreateUser(function(options, user) {
   // Add a custom profile to every user that signs up
   if (options.profile) {
-    user.profile = options.profile
+    user.profile = options.profile;
   } else {
     user.profile = {};
   }
@@ -24,6 +45,10 @@ Accounts.onCreateUser(function(options, user) {
   user.profile.rating = 1000;
   return user;
 });
+
+
+
+
 
 
 Meteor.methods({
@@ -34,20 +59,18 @@ Meteor.methods({
     Find a room with available slots and add the current player to it
     */
 
-    // Only allow players to join one room at a time
-    //TODO: Also add a check like this on the client, to inactivate the join-button or something when a room is joined
-    if (Rooms.findOne({ players: Meteor.userId() })) {
-      return;
-    }
-
     var room = Rooms.findOne({
       players: {
-        $nin: [Meteor.userId()],  // only allow players to join a room once
         $not: {
-          $size: ROOM_MAX_PLAYERS // only find rooms that aren't full
+          $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
         }
-      }
+      },
+      isPublic: true              // Only find public games --> skip invite-only party lobbies
     });
+
+    if (room && room.players.indexOf(Meteor.userId()) > -1) {
+      return;   // Only allow players to join one room at a time
+    }
 
     if (room) {
       addToRoom(room._id);
@@ -60,64 +83,77 @@ Meteor.methods({
   },
 
 
+  // ----------------------------- GAME METHODS ----------------------------------
 
-// ----------------------------- GAME METHODS ----------------------------------
+    startGame: function() {
+      /*
+      Make a room ready for a game by setting default values
 
-  startGame: function() {
-    /*
-    Make a room ready for a game by setting default values
+      Will only allow the room host (players[0]) to start the game
+      */
 
-    Will only allow the room host to start the game
-    */
+      var room = Rooms.findOne({ players: Meteor.userId() });
+      // only allow the host --> room.players[0] to start the game
+      //TODO: test that this works --> Make sure there are at least 2 players in the room to begin the match
+      if (room.players[0] === Meteor.userId() && room.players.length >= 2) {
+        console.log("starting game in room " + room._id);
+        var query = {
+          $set: {
+            inGame: true
+          }
+        };
 
+        //TODO: add default positions in a circle around the center coordinate in the world
+        // check some early episode of 'Coding Math' trigonometry on youtube for implementation
 
-    //NOTE: might be worth to restrict this method to only work if room has a certain number of users (Full room?)
-    var room = Rooms.findOne({ players: Meteor.userId() });
-    // only allow the host --> room.players[0] to start the game
-    if (room.players[0] === Meteor.userId()) {
-      console.log("starting game in room " + room._id);
+        // set default values for each player
+        room.players.forEach(function(userId) {
+          query.$set["playerTarget." + userId] = [];
+          query.$set["spellTarget." + userId] = [];
+          query.$set["playerHP." + userId] = 100;
+        });
+
+        Rooms.update(roomId, query);
+      }
+    }/*,
+    updatePlayerTarget: function(position) {
       var query = {
         $set: {}
       };
 
-      // set default values for each player
-      room.players.forEach(function(user) {
-        query.$set["playerTarget." + user] = [];
-        query.$set["spellTarget." + user] = [];
-        query.$set["playerHP." + user] = 100;
-      });
+      query.$set["playerTarget." + Meteor.userId()] = position;
+      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+    },
+    takeDamage: function(type) {
+      /*
+      Update the health of the current player
 
-      Rooms.update(roomId, query);
-    }
-  },
-  updatePlayerTarget: function(position) {
-    var query = {
-      $set: {}
-    };
+      type: Integer storing type of damage taken --> Either ranged spell hit (1) or damage per second (2)
+      *\/
+      var query = {
+        $inc: {}
+      }
 
-    query.$set["playerTarget." + Meteor.userId()] = position;
-    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
-  },
-  takeDamage: function(type) {
-    /*
-    Update the health of the current player
+      if (type === 1) {
+        var dmg = RANGED_SPELL_DMG;
+      } else if (type === 2) {
+        var dmg = DAMAGE_PER_SECOND;
+      }
 
-    type: Integer storing type of damage taken --> Either ranged spell hit (1) or damage per second (2)
-    */
-    var query = {
-      $inc: {}
-    }
-
-    if (type === 1) {
-      var dmg = RANGED_SPELL_DMG;
-    } else if (type === 2) {
-      var dmg = DAMAGE_PER_SECOND;
-    }
-
-    query.$inc["playerHP." + Meteor.userId()] = dmg;
-    Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
-  }
+      query.$inc["playerHP." + Meteor.userId()] = dmg;
+      Rooms.update(Rooms.findOne({ players: Meteor.userId() })._id, query);
+  }*/
 });
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -146,7 +182,10 @@ function createRoom(addUser) {
     players: [],
     playerTarget: {},
     playerHP: {},
-    spellTarget: {}
+    spellTarget: {},
+    inGame: false,
+    isPublic: true  // TODO: How are we going to handle public and invite-only-rooms?
+                    //       This solution allows us to filter and only work with rooms of the right type
   }
 
   Rooms.insert(room, function(err, roomInserted) {

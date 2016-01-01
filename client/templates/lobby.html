@@ -1,19 +1,48 @@
 <template name="lobby">
-  <div class="lobby">
-    <h1>Lobby</h1>
-    <h3>View the leaderboards or start a new match</h3>
+  <div class="container lobby">
+    <div class="row">
+      <div class="col-xs-12 {{#if userIsInRoom}} group {{else}} group-empty {{/if}}">
+        <h2 class="col-xs-1">Lobby</h2>
+        {{#if userIsInRoom}}
+          <ul class="col-xs-11 players">
+            {{#with getRoomHost}}
+              <li class="sans lobby-host"><img src="img/user.png"><br><b>HOST: </b>{{username}}</li>
+            {{/with}}
 
-    <h4>Instructions:</h4>
-    <p>
-      Kill everyone you see, but don't let them kill you<br>
-      Stay on the platform or it might hurt...
-    </p>
+            {{#each getRoomMembers}}
+              <li class="sans"><img src="img/user.png"><br>{{username}}</li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="col-xs-11">Join a lobby by inviting players or accepting an invite</p>
+        {{/if}}
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-xs-5 friends">
+        <div class="row">
+          <h2 class="col-xs-5">Friends</h2>
+          <form class="addform col-xs-7">
+              <input class="sans" type="text" name="addfriend" placeholder="Add friend">
+          </form>
+        </div>
+        <ul class="col-xs-12 friendslist">
+          {{#each getFriends}}
+            <li class="sans {{#if userIsOnline}} online {{/if}}">
+              &nbsp;{{username}} - {{profile.rating}}
+              {{#if userIsOnline}} <span class="invite">Invite</span> {{/if}}
+            </li>
+          {{/each}}
+        </ul>
+      </div>
 
-    <h4>Controls:</h4>
-    <p>
-      Right-click to move.<br>
-      Press "A" to activate a spell, then left-click to fire
-    </p>
-    <input id="play" type="button" value="Play">
+      <div class="col-xs-7 feed">
+        <div class="col-xs-12 rest"></div>
+        <div class="col-xs-12 buttons">
+          <div class="randomMatch">Random Match</div>
+          <div class="partyMatch">Party Match</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

@@ -1,42 +1,104 @@
-Meteor.subscribe('rooms');
-Meteor.subscribe('users');
+Meteor.subscribe("rooms");
+Meteor.subscribe("currentUser");
+Meteor.subscribe("otherUsers");
 
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
 });
 
-Session.setDefault("inGame", false);
-
-
 Template.body.helpers({
-  'inGame': function () {
-    return Session.get("inGame");
+  'inGame': function() {
+    /*
+    Find out if the current user is in a game
+    */
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    if (room) {
+      return room.inGame;
+    }
+
+    return false;
   }
 });
 
 Template.lobby.events({
-  'click #play': function(event) {
+  'click .partyMatch': function(event) {
     event.preventDefault();
     Meteor.call("joinRoom");
   }
 });
 
-function startRoomUpdateHandler() {
-  // observe changes to the room.players where the current player is in
-  // to be able to add new players to the game as soon as they join
-  console.log("starting roomUpdateHandler");
-
-
-  var query = Rooms.find({ players: Meteor.userId() });
-  var roomUpdateHandler = query.observeChanges({
-    changed: function(id, data) {
-      if (data.players) {
-        // triggered when a player joins
-        initNewPlayer();
-      }
+Template.lobby.helpers({
+  getRoomHost: function() {
+  /*
+  Return the host of the current room
+  */
+  var room = Rooms.findOne({ players: Meteor.userId() });
+  return {
+      username: Meteor.users.findOne(room.players[0]).username  //gets username for the room's host
     }
-  });
+  },
 
-  //TODO: add code that stop the __roomUpdateHandler__ when the game in a room is finished
-  //  HOW? --> simply run this method --> roomUpdateHandler.stop();   // stop observing changes
-}
+  getRoomMembers: function() {
+    /*
+    Return players in a room except the host
+    */
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    var lobbyMembers = [];
+
+    // loop through each member and only keep necessary data to add players to rooms
+    room.players.forEach(function(playerId, index) {
+      if (index > 0) { //Skip the first player --> the host
+        lobbyMembers.push(Meteor.users.findOne(playerId));
+      }
+    });
+
+    lobbyMembers = lobbyMembers.map(function(player) {
+      // loop through each member and only keep necessary data
+      var member = {};
+      //NOTE: Maybe return rating for each member too? --> Also add this to getRoomHost in that case
+      member.username = player.username;
+      return member;
+    });
+    return lobbyMembers;
+  },
+
+  userIsOnline: function() {
+    /*
+    Check if the current user in the Blaze-context is online.
+    Might be unclear but it might make sense when looking at how it's used in the lobby-template
+    */
+    return this.status.online;
+  },
+
+  getFriends: function() {
+    /*
+    Find and return info about friends
+    */
+
+    var friends = Meteor.users.find({
+      _id: {
+        $in: Meteor.user().profile.friends  // the friendlist
+      }
+    },
+    {
+      fields: {
+        username: 1,
+        'profile.rating': 1,
+        'status.online': 1
+      }
+    })
+    .fetch()
+    .sort(function(a, b) {   // Highest rating first (descending)
+      return b.profile.rating - a.profile.rating;
+    });
+
+    return friends;
+  },
+
+  userIsInRoom: function() {
+    if (Rooms.findOne({ players: Meteor.userId() })) {
+      return true;
+    }
+    return false;
+  }
+});

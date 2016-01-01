@@ -1,24 +1,189 @@
+@import url(https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700);
+@import url(https://fonts.googleapis.com/css?family=Coda);
+
 body {
-  font-size: 16px;
-  font-family: monospace;
+  background: #f7f7f7;
+  color: #333;
+  overflow-x: hidden;
+  font-family: "Source Sans Pro";
 }
 
-.welcome {
-  text-align: center;
-  width: 500px;
-  margin: 0 auto;
+body * {
+  font-family: 'Coda', cursive;
+  /*text-shadow: 2px 1px 0 #555;*/
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.sans {
+  font-family: "Source Sans Pro";
+  text-shadow: none;
 }
 
 .lobby {
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  width: 1280px;
+  height: 720px;
+  border-radius: 10px;
+  overflow: hidden;
+
+  transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  -o-transform: translate(-50%, -50%);
+}
+
+.lobby-host {
+  background: rgba(80, 80, 80, 0.7);
+  border-radius: 5px;
+  padding-top: 12px;
+  padding-bottom: 5px;
+  margin-top: -15px;
+}
+
+.lobby-host b {
+  color: #ccc;
+}
+
+.group {
+  color: #fff;
+  background: #444;
+  height: 170px;
+}
+
+.group-empty {
+  color: #fff;
+  background: #444;
+  height: 60px;
+}
+
+.group-empty h2 {
+  line-height: 20px;
+  padding-left: 10px;
+}
+
+.group-empty p {
+  color: #ccc;
+  line-height: 60px;
+}
+
+.players {
+  list-style: none;
+  display: inline-block;
+  padding: 25px 20px 0px 60px;
+}
+.players > li {
+  display: inline-block;
   text-align: center;
-  width: 500px;
+  width: 130px;
+  margin-left: 60px;
+}
+.players > li > img {
+  margin-bottom: 10px;
+  width: 100px;
+}
+.friends {
+  color: #fff;
+  background: #666;
+  height: 550px;
+  display: inline-block;
+}
+
+.friends .row h2 {
+  padding-left: 25px;
+}
+
+.addform {
+  display: inline-block;
+  padding: 18px;
+}
+.addform > input {
+  height: 35px;
+  border-radius: 15px;
+  border: none;
+  padding: 10px;
+  color: #222;
+  font-size: 15px;
+  background: #f5f5f5;
+  width: 100%;
+  box-shadow: 3px 2px 0 #555;
+}
+.addform > input:focus {
+  outline: none;
+}
+.friendslist {
+  border-radius: 10px 0 0 10px;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0 0 0 0;
+  background: #f5f5f5;
+  color: #444;
+  height: 400px;
+  box-shadow: 3px 3px 0 #555;
+}
+.friendslist > li {
+  margin: 0;
+  padding: 10px;
+  width: 100%;
+  border-bottom: solid 1px #ddd;
+}
+.invite {
+  font-family: "Source Sans Pro";
+  background: #f1cb63;
+  border-radius: 5px;
+  color: #fff;
+  float: right;
+  text-shadow: none;
+  padding: 2px 12px;
+}
+.invite:hover {
+  background: #fbd366;
+  cursor: pointer;
+}
+.feed {
+  background: #555;
+  height: 550px;
+}
+
+.rest {
+  height: 400px;
+}
+
+.buttons {
+  text-align: center;
+  display: inline-block;
+}
+.playButton {
+  margin: 0 10px;
+  padding: 20px 40px;
+  border-radius: 10px;
+  background: #f56149;
+  font-size: 25px;
+  color: #fff;
+  box-shadow: 2px 2px 0 #ce5642;
+  display: inline-block;
+}
+.playButton:hover {
+  cursor: pointer;
+  background: #fe6d56;
+}
+
+.online::before {
+  content: "● ";
+  color: #6fe350;
+}
+
+
+
+
+
+
+/* Temp */
+
+.welcome {
   margin: 0 auto;
-}
-
-.lobby h1, .lobby h3 {
-  font-weight: lighter;
-}
-
-#play {
-  transform: scale(1.5);
 }
