@@ -24,15 +24,13 @@ Meteor.publish('otherUsers', function() {
   });
 });
 
-
-
-/*
-TODO:
-
-* Allow users to switch between 'Friends' and 'Online Users' in the left sidebar
-  * https://stackoverflow.com/questions/29425906/how-can-i-create-a-list-of-online-active-users
-  * ^ Examples of code that solves this
-*/
+Meteor.publish("userStatus", function() {
+  return Meteor.users.find({ "status.online": true }, {
+    fields: {
+      'status.online': 1
+    }
+  });
+});
 
 Accounts.onCreateUser(function(options, user) {
   // Add a custom profile to every user that signs up

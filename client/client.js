@@ -1,6 +1,7 @@
 Meteor.subscribe("rooms");
 Meteor.subscribe("currentUser");
 Meteor.subscribe("otherUsers");
+Meteor.subscribe('userStatus');
 
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
@@ -173,6 +174,9 @@ Template.lobby.helpers({
     if (room) {
       return room.players[0] === Meteor.user()._id;
     }
+  },
+  usersOnlineCount: function() {
+   return Meteor.users.find({ "status.online": true }).count();
   }
 });
 

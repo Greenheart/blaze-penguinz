@@ -35,6 +35,7 @@ body * {
   -webkit-user-select: none;
   -ms-user-select: none;
   -moz-user-select: none;
+  transition: all 0.3s ease-out;
 }
 
 .toggle-button button {
@@ -51,12 +52,13 @@ body * {
   float: left;
   margin: -3px 0 0 -3px;
   border: 2px solid #D0D0D0;
-  transition: left 0.3s;
+  transition: all 0.3s ease-out;
 }
 
 .toggle-button-selected {
   background-color: #83B152;
   border: 2px solid #7DA652;
+  transition: background-color 0.3s ease-out;
 }
 
 .toggle-button-selected button {
@@ -71,6 +73,11 @@ body * {
 
 .disabled {
   opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.disabled button {
+  cursor: not-allowed;
 }
 
 .lobby-title {
@@ -179,7 +186,7 @@ body * {
   padding: 0 0 0 0;
   background: #f5f5f5;
   color: #444;
-  height: 400px;
+  height: 440px;
   box-shadow: 3px 3px 0 #555;
 }
 .friendslist > li {
@@ -201,6 +208,14 @@ body * {
   background: #fbd366;
   cursor: pointer;
 }
+
+.online-status {
+  height: 20px;
+  position:absolute;
+  bottom: 0;
+  margin-left: 5px;
+}
+
 .feed {
   background: #555;
   height: 550px;
