@@ -25,6 +25,30 @@ Template.lobby.events({
     event.preventDefault();
     Meteor.call("joinRoom");
   },
+  'click .toggle-button': function() {
+    var room = Rooms.findOne({ players: Meteor.user()._id });
+    if (room && room.players[0] === Meteor.user()._id) {
+      // Only allow the room's host to change the room-type
+      Meteor.call("toggleRoomType", room._id, function(error, result){
+        if(error){
+          displayError(err);
+          return;
+        } else {  // successful change, update UI
+
+          var room = Rooms.findOne({ players: Meteor.user()._id });
+          if (room) {
+            if (room.isPublic) {
+              $('.room-type').text("Public");
+              $('.toggle-button').removeClass('toggle-button-selected');
+            } else {
+              $('.room-type').text("Invite-only");
+              $('.toggle-button').addClass('toggle-button-selected');
+            }
+          }
+        }
+      });
+    }
+  },
   'submit .addform': function(event) {
     event.preventDefault();
 
@@ -33,12 +57,12 @@ Template.lobby.events({
     console.log(Meteor.users.findOne);
 
     if (input === Meteor.user().username) {
-      inputError("You can't add yourself");
+      displayError("You can't add yourself");
       return;
     }
     var user = Meteor.users.findOne({username: input});
     if (user && Meteor.user().profile.friends.indexOf(user._id) > -1) {
-      inputError("You're already friends with "+input+"!");
+      displayError("You're already friends with "+input+"!");
       return;
     }
 
@@ -53,13 +77,13 @@ Template.lobby.events({
       },
       function(err, res) {
       	if (res) {
-          inputError(res);
+          displayError(res);
         }
       });
     } else if (input.length > USERNAME_MAX_LEN) {
-      inputError("The name is too long");
+      displayError("The name is too long");
     } else {
-    	inputError("The name is too short");
+    	displayError("The name is too short");
     }
   }
 });
@@ -137,13 +161,25 @@ Template.lobby.helpers({
       return true;
     }
     return false;
+  },
+  roomIsPublic: function() {
+    var room = Rooms.findOne({ players: Meteor.user()._id });
+    if (room) {
+      return room.isPublic;
+    }
+  },
+  userIsRoomHost: function() {
+    var room = Rooms.findOne({ players: Meteor.user()._id });
+    if (room) {
+      return room.players[0] === Meteor.user()._id;
+    }
   }
 });
 
 
 //------------------------------ GENERAL HELPERS -------------------------------
 
-function inputError(msg) {
+function displayError(msg) {
   // Alert users about errors
   alert(msg);
 }
