@@ -1,8 +1,5 @@
 Meteor.publish('rooms', function() {
-  //TODO: more secure version (add on deployment) --> return Rooms.find({ players: Meteor.userId });
-  if (this.userId) {
-    return Rooms.find();
-  }
+  return Rooms.find({ players: this.userId });
 });
 
 Meteor.publish('currentUser', function() {
@@ -62,6 +59,15 @@ Meteor.publish("onlineStatus", function() {
       }
     });
   }
+});
+
+
+
+Accounts.validateNewUser(function (user) {
+  if (user.username && user.username.length <= 12 && user.username.length >= 3) {
+    return true;
+  }
+  throw new Meteor.Error("", "Usernames can't be longer than 12 characters");
 });
 
 Accounts.onCreateUser(function(options, user) {

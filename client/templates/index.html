@@ -17,13 +17,13 @@
   </div>
   {{/if}}
 
-  <!-- {{> loginButtons}} -->
   {{#if currentUser}}
     {{#if inGame}}
       <div id="container">
         {{game}}
       </div>
     {{else}}
+      <div id="login-container">{{> loginButtons}}</div>
       {{> lobby}}
     {{/if}}
   {{else}}

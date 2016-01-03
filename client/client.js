@@ -1,8 +1,12 @@
-Meteor.subscribe("rooms");
-Meteor.subscribe("currentUser");
-Meteor.subscribe("friends");
-Meteor.subscribe('onlineStatus');
-Meteor.subscribe("usersInCurrentRoom");
+Tracker.autorun(function() {  // limit publications to authenticated clients
+  if (Meteor.userId()) {
+    Meteor.subscribe("rooms");
+    Meteor.subscribe("currentUser");
+    Meteor.subscribe("friends");
+    Meteor.subscribe('onlineStatus');
+    Meteor.subscribe("usersInCurrentRoom");
+  }
+});
 
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"

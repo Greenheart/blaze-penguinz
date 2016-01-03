@@ -29,6 +29,12 @@ red {
   color: #f56149;
 }
 
+#login-container {
+  position: fixed;
+  top: 5px;
+  left: 10px;
+}
+
 .toggle-button {
   background-color: white;
   margin: 5px 0;
@@ -242,7 +248,7 @@ red {
 }
 .playButton {
   margin: 0 10px;
-  padding: 20px 30px;
+  padding: 15px 25px;
   background: #f56149;
   font-size: 23px;
   color: #fff;
@@ -297,5 +303,9 @@ red {
 /* Temp */
 
 .welcome {
+  display: block;
   margin: 0 auto;
+  width: 250px;
+  text-align: center;
+  font-size: 120%;
 }
