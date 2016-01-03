@@ -102,10 +102,11 @@ Template.lobby.events({
     });
   },
   'click .declineInvite': function(event) {
-    Meteor.call('declineInvite');
+    Meteor.call('removeInvite');
   },
   'click .accpentInvite': function(event) {
     // Join lobby
+    Meteor.call('removeInvite');
   }
 });
 
