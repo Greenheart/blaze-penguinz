@@ -34,9 +34,18 @@ Template.body.events({
 });
 
 Template.lobby.events({
-  'click .partyMatch': function(event) {
+  'click .playButton': function(event) {
     event.preventDefault();
-    Meteor.call("joinRoom");
+    var room = Rooms.findOne({ players: Meteor.userId() });
+
+    if (room) {
+      if (userIsHost()) {
+        Meteor.call("startGame");
+      }
+    } else {
+      Meteor.call("joinRoom");  // try to join a random room
+    }
+
   },
   'click .toggle-button': function() {
     var room = Rooms.findOne({ players: Meteor.userId() });
@@ -121,13 +130,21 @@ Template.lobby.events({
   },
   'click .acceptInvite': function(event) {
     // Call method leaveRoom to leave the current room and delete it if you were the last person to leave
-    var room = Rooms.findOne({ players: Meteor.userId() });
+    var room = Rooms.findOne({ players: Meteor.userId() }, {
+      fields: {
+        players: 1
+      }
+    });
     Meteor.call('leaveRoom', room);
     Meteor.call('joinRoom', Meteor.user().profile.invites[0]);
     Meteor.call('removeInvite');
   },
   'click .leaveRoom': function(event) {
-    var room = Rooms.findOne({ players: Meteor.userId() });
+    var room = Rooms.findOne({ players: Meteor.userId() }, {
+      fields: {
+        players: 1
+      }
+    });
     Meteor.call('leaveRoom', room);
   }
 });
@@ -223,10 +240,7 @@ Template.lobby.helpers({
     }
   },
   userIsRoomHost: function() {
-    var room = Rooms.findOne({ players: Meteor.userId() });
-    if (room) {
-      return room.players[0] === Meteor.userId();
-    }
+    return userIsHost();
   },
   usersOnlineCount: function() {
    return Meteor.users.find({ "status.online": true }).count();
@@ -235,6 +249,13 @@ Template.lobby.helpers({
 
 
 //------------------------------ GENERAL HELPERS -------------------------------
+
+function userIsHost() {
+  var room = Rooms.findOne({ players: Meteor.userId() });
+  if (room) {
+    return room.players[0] === Meteor.userId();
+  }
+}
 
 function displayError(msg) {
   // Alert users about errors

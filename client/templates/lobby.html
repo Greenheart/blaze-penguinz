@@ -68,8 +68,11 @@
       <div class="col-xs-7 feed">
         <div class="col-xs-12 rest"></div>
         <div class="col-xs-12 buttons">
-          <div class="playButton randomMatch coda clickable">Random Match</div>
-          <div class="playButton partyMatch coda clickable">Party Match</div>
+          {{#if userIsInRoom}}
+            <div class="playButton coda clickable {{#if userIsRoomHost}} {{else}} disabled {{/if}}">Start Game</div>
+          {{else}}
+            <div class="playButton coda clickable">Find Lobby</div>
+          {{/if}}
         </div>
       </div>
     </div>

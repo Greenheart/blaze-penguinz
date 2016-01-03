@@ -165,7 +165,7 @@ Meteor.methods({
           query.$set["playerHP." + userId] = 100;
         });
 
-        Rooms.update(roomId, query);
+        Rooms.update(room._id, query);
       }
     }
   },
