@@ -66,6 +66,7 @@ Template.lobby.events({
     event.preventDefault();
 
     var input = $('[name="addfriend"]').val();
+    $('[name="addfriend"]').val("");
 
     if (input === Meteor.user().username) {
       displayError("You can't add yourself");
