@@ -1,58 +1,67 @@
 Meteor.publish('rooms', function() {
   //TODO: more secure version (add on deployment) --> return Rooms.find({ players: Meteor.userId });
-  return Rooms.find();
-
+  if (this.userId) {
+    return Rooms.find();
+  }
 });
 
 Meteor.publish('currentUser', function() {
-  return Meteor.users.find({ _id: this.userId }, {
-    fields: {
-      'status.online': 1,
-      'profile': 1,      // Includes 'profile.friends' to allow current user to see their friendlist
-      'username': 1
-    }
-  })
-});
-
-Meteor.publish("usersInCurrentRoom", function() {
-  var room = Rooms.findOne({ players: this.userId });
-  if (room) {
-    // remove currentUser from the array
-    room.players.splice(room.players.indexOf(this.userId), 1);
-
-    // get the cursor that finds info about users in the current room
-    var usersInRoom = Meteor.users.find({
-      players: {
-        $in: room.players
+  if (this.userId) {
+    return Meteor.users.find({ _id: this.userId }, {
+      fields: {
+        'status.online': 1,
+        'profile': 1,      // Includes 'profile.friends' to allow current user to see their friendlist
+        'username': 1
       }
-    }, {
-      'status.online': 1,
-      'profile.rating': 1,
-      'username': 1
     });
   }
 });
 
+Meteor.publish("usersInCurrentRoom", function() {
+  if (this.userId) {
+    var room = Rooms.findOne({ players: this.userId });
+    if (room) {
+      // remove currentUser from the array
+      room.players.splice(room.players.indexOf(this.userId), 1);
+
+      // get the cursor that finds info about users in the current room
+      var usersInRoom = Meteor.users.find({
+        players: {
+          $in: room.players
+        }
+      }, {
+        'status.online': 1,
+        'profile.rating': 1,
+        'username': 1
+      });
+    }
+  }
+});
+
 Meteor.publish('friends', function() {
-  return Meteor.users.find({
-    _id: {
-      $in: Meteor.users.findOne({ _id: this.userId }).profile.friends
-    }
-  }, {
-    fields: {
-      'status.online': 1,
-      'profile.rating': 1,
-      'username': 1
-    }
-  });
+  if (this.userId) {
+    return Meteor.users.find({
+      _id: {
+        $in: Meteor.users.findOne({ _id: this.userId }).profile.friends
+      }
+    }, {
+      fields: {
+        'status.online': 1,
+        'profile.rating': 1,
+        'username': 1
+      }
+    });
+  }
 });
 
 Meteor.publish("onlineStatus", function() {
-  return Meteor.users.find({ "status.online": true }, {
-    fields: {
-      'status.online': 1
-    }
-  });
+  if (this.userId) {
+    return Meteor.users.find({ "status.online": true }, {
+      fields: {
+        'status.online': 1
+      }
+    });
+  }
 });
 
 Accounts.onCreateUser(function(options, user) {
@@ -80,27 +89,26 @@ Meteor.methods({
     Find a room with available slots and add the current player to it
     */
 
-    var room = Rooms.findOne({
-      players: {
-        $not: {
-          $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
-        }
-      },
-      isPublic: true              // Only find public games --> skip invite-only party lobbies
-    });
+    if (this.userId) {
+      var room = Rooms.findOne({
+        players: {
+          $not: {
+            $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
+          }
+        },
+        isPublic: true              // Only find public games --> skip invite-only party lobbies
+      });
 
-    if (room && room.players.indexOf(Meteor.userId()) > -1) {
-      return;   // Only allow players to join one room at a time
-    }
+      if (room && room.players.indexOf(Meteor.userId()) > -1) {
+        return;   // Only allow players to join one room at a time
+      }
 
-    if (room) {
-      addToRoom(room._id);
-    } else {
-      createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+      if (room) {
+        addToRoom(room._id);
+      } else {
+        createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+      }
     }
-  },
-  removeRoom: function(roomId) {
-    Rooms.remove({ _id: roomId });
   },
 
 
@@ -112,49 +120,52 @@ Meteor.methods({
 
     Will only allow the room host (players[0]) to start the game
     */
+    if (this.userId) {
+      var room = Rooms.findOne({ players: Meteor.userId() });
+      // only allow the host --> room.players[0] to start the game
+      //TODO: test that this works --> Make sure there are at least 2 players in the room to begin the match
+      if (room.players[0] === Meteor.userId() && room.players.length >= 2) {
+        console.log("starting game in room " + room._id);
+        var query = {
+          $set: {
+            inGame: true
+          }
+        };
 
-    var room = Rooms.findOne({ players: Meteor.userId() });
-    // only allow the host --> room.players[0] to start the game
-    //TODO: test that this works --> Make sure there are at least 2 players in the room to begin the match
-    if (room.players[0] === Meteor.userId() && room.players.length >= 2) {
-      console.log("starting game in room " + room._id);
-      var query = {
-        $set: {
-          inGame: true
-        }
-      };
+        //TODO: add default positions in a circle around the center coordinate in the world
+        // check some early episode of 'Coding Math' trigonometry on youtube for implementation
 
-      //TODO: add default positions in a circle around the center coordinate in the world
-      // check some early episode of 'Coding Math' trigonometry on youtube for implementation
+        // set default values for each player
+        room.players.forEach(function(userId) {
+          query.$set["playerTarget." + userId] = [];
+          query.$set["spellTarget." + userId] = [];
+          query.$set["playerHP." + userId] = 100;
+        });
 
-      // set default values for each player
-      room.players.forEach(function(userId) {
-        query.$set["playerTarget." + userId] = [];
-        query.$set["spellTarget." + userId] = [];
-        query.$set["playerHP." + userId] = 100;
-      });
-
-      Rooms.update(roomId, query);
+        Rooms.update(roomId, query);
+      }
     }
   },
   addFriend: function(query) {
-  	//search for user with username in query.username
+  	// Search for user with username in query.username
 
-    var user = Meteor.users.findOne(query, {
-      fields: {
-        username: 1
-      }
-    });
-
-    if (user) {
-    	Meteor.users.update({ _id: Meteor.userId() }, {
-      	$push: {
-        	'profile.friends': user._id
+    if (this.userId) {
+      var user = Meteor.users.findOne(query, {
+        fields: {
+          username: 1
         }
       });
 
-    } else {
-      return "Couldn't find "+query.username;
+      if (user) {
+        Meteor.users.update({ _id: Meteor.userId() }, {
+          $push: {
+            'profile.friends': user._id
+          }
+        });
+
+      } else {
+        return "Couldn't find "+query.username;
+      }
     }
   }/*,
   updatePlayerTarget: function(position) {
