@@ -1,7 +1,8 @@
 Meteor.subscribe("rooms");
 Meteor.subscribe("currentUser");
-Meteor.subscribe("otherUsers");
-Meteor.subscribe('userStatus');
+Meteor.subscribe("friends");
+Meteor.subscribe('onlineStatus');
+Meteor.subscribe("usersInCurrentRoom");
 
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
@@ -27,7 +28,7 @@ Template.lobby.events({
     Meteor.call("joinRoom");
   },
   'click .toggle-button': function() {
-    var room = Rooms.findOne({ players: Meteor.user()._id });
+    var room = Rooms.findOne({ players: Meteor.userId() });
     if (room && room.players[0] === Meteor.user()._id) {
       // Only allow the room's host to change the room-type
       Meteor.call("toggleRoomType", room._id, function(error, result){
@@ -36,7 +37,7 @@ Template.lobby.events({
           return;
         } else {  // successful change, update UI
 
-          var room = Rooms.findOne({ players: Meteor.user()._id });
+          var room = Rooms.findOne({ players: Meteor.userId() });
           if (room) {
             if (room.isPublic) {
               $('.room-type').text("Public");
@@ -54,8 +55,6 @@ Template.lobby.events({
     event.preventDefault();
 
     var input = $('[name="addfriend"]').val();
-
-    console.log(Meteor.users.findOne);
 
     if (input === Meteor.user().username) {
       displayError("You can't add yourself");
@@ -151,28 +150,32 @@ Template.lobby.helpers({
     })
     .fetch()
     .sort(function(a, b) {   // Highest rating first (descending)
-      return b.profile.rating - a.profile.rating;
+      if (a && b) {
+        return b.profile.rating - a.profile.rating;
+      }
     });
 
     return friends;
   },
 
   userIsInRoom: function() {
-    if (Rooms.findOne({ players: Meteor.userId() })) {
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    if (room) {
+      Session.set("currentRoomId", room._id);
       return true;
     }
     return false;
   },
   roomIsPublic: function() {
-    var room = Rooms.findOne({ players: Meteor.user()._id });
+    var room = Rooms.findOne({ players: Meteor.userId() });
     if (room) {
       return room.isPublic;
     }
   },
   userIsRoomHost: function() {
-    var room = Rooms.findOne({ players: Meteor.user()._id });
+    var room = Rooms.findOne({ players: Meteor.userId() });
     if (room) {
-      return room.players[0] === Meteor.user()._id;
+      return room.players[0] === Meteor.userId();
     }
   },
   usersOnlineCount: function() {

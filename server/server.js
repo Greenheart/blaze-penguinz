@@ -5,7 +5,7 @@ Meteor.publish('rooms', function() {
 });
 
 Meteor.publish('currentUser', function() {
-  return Meteor.users.find({}, {
+  return Meteor.users.find({ _id: this.userId }, {
     fields: {
       'status.online': 1,
       'profile': 1,      // Includes 'profile.friends' to allow current user to see their friendlist
@@ -14,9 +14,32 @@ Meteor.publish('currentUser', function() {
   })
 });
 
-Meteor.publish('otherUsers', function() {
-  return Meteor.users.find({}, {
-    fields: { // only publish these fields (+ '_id')
+Meteor.publish("usersInCurrentRoom", function() {
+  var room = Rooms.findOne({ players: this.userId });
+  if (room) {
+    // remove currentUser from the array
+    room.players.splice(room.players.indexOf(this.userId), 1);
+
+    // get the cursor that finds info about users in the current room
+    var usersInRoom = Meteor.users.find({
+      players: {
+        $in: room.players
+      }
+    }, {
+      'status.online': 1,
+      'profile.rating': 1,
+      'username': 1
+    });
+  }
+});
+
+Meteor.publish('friends', function() {
+  return Meteor.users.find({
+    _id: {
+      $in: Meteor.users.findOne({ _id: this.userId }).profile.friends
+    }
+  }, {
+    fields: {
       'status.online': 1,
       'profile.rating': 1,
       'username': 1
@@ -24,7 +47,7 @@ Meteor.publish('otherUsers', function() {
   });
 });
 
-Meteor.publish("userStatus", function() {
+Meteor.publish("onlineStatus", function() {
   return Meteor.users.find({ "status.online": true }, {
     fields: {
       'status.online': 1
