@@ -112,9 +112,6 @@ red {
 .lobby-host {
   background: rgba(80, 80, 80, 0.7);
   border-radius: 5px;
-  padding-top: 12px;
-  padding-bottom: 5px;
-  margin-top: -15px;
 }
 
 .lobby-host b {
@@ -124,7 +121,6 @@ red {
 .group {
   color: #fff;
   background: #444;
-  height: 170px;
 }
 
 .group-empty {
@@ -146,18 +142,26 @@ red {
 .players {
   list-style: none;
   display: inline-block;
-  padding: 25px 20px 0px 60px;
+  padding: 0;
+  margin: 0;
 }
 .players > li {
   display: inline-block;
   text-align: center;
-  width: 130px;
-  margin-left: 60px;
+  padding: 10px 15px;
+  margin: 10px 15px;
 }
 .players > li > img {
   margin-bottom: 10px;
   width: 100px;
 }
+
+.leaveRoom {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
 .friends {
   color: #fff;
   background: #666;

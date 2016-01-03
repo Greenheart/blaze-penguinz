@@ -124,6 +124,10 @@ Template.lobby.events({
     Meteor.call('leaveRoom', room);
     Meteor.call('joinRoom', Meteor.user().profile.invites[0]);
     Meteor.call('removeInvite');
+  },
+  'click .leaveRoom': function(event) {
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    Meteor.call('leaveRoom', room);
   }
 });
 
