@@ -85,10 +85,37 @@ Template.lobby.events({
     } else {
     	displayError("The name is too short");
     }
+  },
+  'click .invite': function(event) {
+    event.preventDefault();
+
+    // Reciever ID
+    var rId = this._id;
+
+    Meteor.call("invitePlayer", {
+      _id: rId
+    },
+    function(err, res) {
+      if (res) {
+        displayError(res);
+      }
+    });
+  },
+  'click .declineInvite': function(event) {
+    Meteor.call('declineInvite');
+  },
+  'click .accpentInvite': function(event) {
+    // Join lobby
   }
 });
 
 Template.lobby.helpers({
+  playerInvited: function() {
+    if (Meteor.user().profile.invites) {
+      return Meteor.users.findOne(Meteor.user().profile.invites[0]).username;
+    }
+  },
+
   getRoomHost: function() {
   /*
   Return the host of the current room

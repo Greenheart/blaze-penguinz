@@ -1,9 +1,19 @@
 <template name="lobby">
+  {{#if playerInvited}}
+  <div class="lobbyInvite">
+    <div class="popup">
+      <p class="col-xs-12"><br><br>Player <red>{{playerInvited}}</red> has invited you to join his lobby!<br><br></p>
+      <span class="button coda clickable acceptInvite">Accept</span>
+      <span class="button coda clickable declineInvite">Decline</span>
+      <p><br><br></p>
+    </div>
+  </div>
+  {{/if}}
   <div class="container lobby">
     <div class="row">
       <div class="col-xs-12 {{#if userIsInRoom}} group {{else}} group-empty {{/if}}">
         <div class="col-xs-2 lobby-title">
-          <h2>Lobby</h2>
+          <h2 class="coda">Lobby</h2>
           {{#if userIsInRoom}}
             <div class="toggle-button {{#if roomIsPublic}} {{else}}toggle-button-selected{{/if}}
                         {{#if userIsRoomHost}} {{else}} disabled {{/if}}">
@@ -21,11 +31,11 @@
         {{#if userIsInRoom}}
           <ul class="col-xs-10 players">
             {{#with getRoomHost}}
-              <li class="sans lobby-host"><img src="img/user.png"><br><b>HOST: </b>{{username}}</li>
+              <li class="lobby-host"><img src="img/user.png"><br><b>HOST: </b>{{username}}</li>
             {{/with}}
 
             {{#each getRoomMembers}}
-              <li class="sans"><img src="img/user.png"><br>{{username}}</li>
+              <li><img src="img/user.png"><br>{{username}}</li>
             {{/each}}
           </ul>
         {{else}}
@@ -36,14 +46,14 @@
     <div class="row">
       <div class="col-xs-5 friends">
         <div class="row">
-          <h2 class="col-xs-5">Friends</h2>
+          <h2 class="coda col-xs-5">Friends</h2>
           <form class="addform col-xs-7">
-              <input class="sans" type="text" name="addfriend" placeholder="Add friend...">
+              <input type="text" name="addfriend" placeholder="Add friend...">
           </form>
         </div>
         <ul class="col-xs-12 friendslist">
           {{#each getFriends}}
-            <li class="sans {{#if userIsOnline}} online {{/if}}">
+            <li class="{{#if userIsOnline}} online {{/if}}">
               &nbsp;{{username}}&nbsp;&nbsp;-&nbsp;&nbsp;{{profile.rating}}
               {{#if userIsOnline}} <span class="invite">Invite</span> {{/if}}
             </li>
@@ -57,8 +67,8 @@
       <div class="col-xs-7 feed">
         <div class="col-xs-12 rest"></div>
         <div class="col-xs-12 buttons">
-          <div class="playButton randomMatch">Random Match</div>
-          <div class="playButton partyMatch">Party Match</div>
+          <div class="playButton randomMatch coda clickable">Random Match</div>
+          <div class="playButton partyMatch coda clickable">Party Match</div>
         </div>
       </div>
     </div>

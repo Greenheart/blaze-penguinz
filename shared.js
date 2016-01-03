@@ -26,5 +26,12 @@ Meteor.methods({
         }
       });
     }
+  },
+  declineInvite: function() {
+    Meteor.users.update({ _id: Meteor.userId() }, {
+      $pull: {
+        'profile.invites': Meteor.user().profile.invites[0]
+      }
+    });
   }
 });

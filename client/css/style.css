@@ -9,16 +9,24 @@ body {
 }
 
 body * {
-  font-family: 'Coda', cursive;
+  font-family: "Source Sans Pro";
+  /*font-family: 'Coda', cursive;*/
   /*text-shadow: 2px 1px 0 #555;*/
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  text-shadow: none;
 }
 
-.sans {
-  font-family: "Source Sans Pro";
-  text-shadow: none;
+.coda {
+  font-family: 'Coda', cursive;
+}
+
+.clickable:hover {
+  cursor: pointer;
+}
+red {
+  color: #f56149;
 }
 
 .toggle-button {
@@ -91,7 +99,6 @@ body * {
   left: 50vw;
   min-width: 800px;
   min-height: 600px;
-  border-radius: 10px;
   overflow: hidden;
 
   transform: translate(-50%, -50%);
@@ -167,7 +174,7 @@ body * {
 }
 .addform > input {
   height: 35px;
-  border-radius: 15px;
+  border-radius: 0px 12px 12px 0px;
   border: none;
   padding: 10px;
   color: #222;
@@ -231,16 +238,14 @@ body * {
 }
 .playButton {
   margin: 0 10px;
-  padding: 20px 40px;
-  border-radius: 10px;
+  padding: 20px 30px;
   background: #f56149;
-  font-size: 25px;
+  font-size: 23px;
   color: #fff;
   box-shadow: 2px 2px 0 #ce5642;
   display: inline-block;
 }
-.playButton:hover {
-  cursor: pointer;
+.playButton:hover, .button:hover {
   background: #fe6d56;
 }
 
@@ -249,8 +254,38 @@ body * {
   color: #6fe350;
 }
 
+.lobbyInvite {
+  position: fixed;
+  height: 100vh;
+  width: 100vw;
+  background: rgba(0,0,0,0.8);
+  z-index: 100;
+}
+.popup {
+  position: absolute;
+  width: 500px;
+  background: #f2f2f2;
+  font-size: 20px;
+  z-index: 101;
+  left: 50vw;
+  top: 50vh;
+  text-align: center;
 
+  transform: translate(-50%, -50%);
+  -webkit-transform: translate(-50%, -50%);
+  -moz-transform: translate(-50%, -50%);
+  -ms-transform: translate(-50%, -50%);
+  -o-transform: translate(-50%, -50%);
+}
 
+.button {
+  margin: 10px;
+  background: #f56149;
+  color: #f2f2f2;
+  font-size: 20px;
+  padding: 5px 10px;
+  box-shadow: 2px 2px 0 #ce5642;
+}
 
 
 

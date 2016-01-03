@@ -73,6 +73,7 @@ Accounts.onCreateUser(function(options, user) {
   }
   user.profile.friends = [];
   user.profile.rating = 1000;
+  user.profile.invites = [];
   return user;
 });
 
@@ -166,6 +167,26 @@ Meteor.methods({
       } else {
         return "Couldn't find "+query.username;
       }
+    }
+  },
+  invitePlayer: function(query) {
+
+    // Fetch the user that is to be sent an invite
+    var user = Meteor.users.findOne(query, {
+      fields: {
+        _id: 1
+      }
+    });
+
+    // If the user was found, send him an invite from the player that sent it
+    if (user) {
+      Meteor.users.update({ _id: user._id }, {
+        $push: {
+          'profile.invites': Meteor.userId()
+        }
+      });
+    } else {
+      return "Could not invite player";
     }
   }/*,
   updatePlayerTarget: function(position) {
