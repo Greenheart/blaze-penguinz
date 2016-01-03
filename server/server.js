@@ -85,30 +85,52 @@ Accounts.onCreateUser(function(options, user) {
 Meteor.methods({
 // ------------------------------ ROOM METHODS ---------------------------------
 
-  joinRoom: function() {
+  joinRoom: function(friendId) {
     /*
     Find a room with available slots and add the current player to it
     */
 
     if (this.userId) {
-      var room = Rooms.findOne({
-        players: {
-          $not: {
-            $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
-          }
-        },
-        isPublic: true              // Only find public games --> skip invite-only party lobbies
-      });
+      if (friendId) {
+        var room = Rooms.findOne({
+          players: {
+            $not: {
+              $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
+            },
+            $in: [ friendId ]
+          },
+          inGame: false
+        });
+      } else {
+        var room = Rooms.findOne({
+          players: {
+            $not: {
+              $size: ROOM_MAX_PLAYERS // Only find rooms with available slots
+            }
+          },
+          isPublic: true              // Only find public games --> skip invite-only party lobbies
+        });
+      }
 
       if (room && room.players.indexOf(Meteor.userId()) > -1) {
-        return;   // Only allow players to join one room at a time
+        return "You can only be in one room at a time!";   // Only allow players to join one room at a time
       }
 
       if (room) {
         addToRoom(room._id);
       } else {
-        createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+        if (friendId) {
+          return "You cannot join this room"
+        } else {
+          createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+        }
       }
+    }
+  },
+
+  createRoom: function(join) {
+    if (this.userId) {
+      createRoom(join);
     }
   },
 

@@ -7,6 +7,16 @@
 
 <body>
 
+  {{#if errorMsg}}
+  <div class="darkScreen">
+    <div class="popup">
+      <p class="col-xs-12"><br><br>&nbsp;{{errorMsg}}&nbsp;<br><br></p>
+      <span class="button coda clickable acceptError">OK</span>
+      <p><br><br></p>
+    </div>
+  </div>
+  {{/if}}
+
   <!-- {{> loginButtons}} -->
   {{#if currentUser}}
     {{#if inGame}}

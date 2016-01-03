@@ -9,6 +9,11 @@ Accounts.ui.config({
 });
 
 Template.body.helpers({
+  'errorMsg': function() {
+    if (Session.get('errorMessage')) {
+      return Session.get('errorMessage');
+    }
+  },
   'inGame': function() {
     /*
     Find out if the current user is in a game
@@ -19,6 +24,12 @@ Template.body.helpers({
     }
 
     return false;
+  }
+});
+
+Template.body.events({
+  'click .acceptError': function(event) {
+    Session.set('errorMessage', '');
   }
 });
 
@@ -89,11 +100,14 @@ Template.lobby.events({
   'click .invite': function(event) {
     event.preventDefault();
 
-    // Reciever ID
-    var rId = this._id;
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    // If the player is not in a room, create a new one on inviting
+    if (!room) {
+      Meteor.call("createRoom", true);
+    }
 
     Meteor.call("invitePlayer", {
-      _id: rId
+      _id: this._id
     },
     function(err, res) {
       if (res) {
@@ -104,8 +118,11 @@ Template.lobby.events({
   'click .declineInvite': function(event) {
     Meteor.call('removeInvite');
   },
-  'click .accpentInvite': function(event) {
-    // Join lobby
+  'click .acceptInvite': function(event) {
+    // Call method leaveRoom to leave the current room and delete it if you were the last person to leave
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    Meteor.call('leaveRoom', room);
+    Meteor.call('joinRoom', Meteor.user().profile.invites[0]);
     Meteor.call('removeInvite');
   }
 });
@@ -216,5 +233,5 @@ Template.lobby.helpers({
 
 function displayError(msg) {
   // Alert users about errors
-  alert(msg);
+  Session.set('errorMessage', msg);
 }

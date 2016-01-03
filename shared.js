@@ -27,11 +27,34 @@ Meteor.methods({
       });
     }
   },
+
   removeInvite: function() {
     Meteor.users.update({ _id: Meteor.userId() }, {
       $pull: {
         'profile.invites': Meteor.user().profile.invites[0]
       }
     });
+  },
+
+  leaveRoom: function(room) {
+    if (room) {
+      if (this.userId) {
+        console.log("Removing room " + room._id);
+        // Leave your current room and if you are the last person to leave -> remove it
+        if (room.players.indexOf(this.userId > -1)) {
+          // The player is in the room
+          if (room.players.length == 1) {
+            Rooms.remove(room._id)
+
+          } else {
+            Rooms.update(room._id, {
+              $pull: {
+                players: this.userId
+              }
+            });
+          }
+        }
+      }
+    }
   }
 });
