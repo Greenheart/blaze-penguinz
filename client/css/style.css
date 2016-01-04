@@ -87,7 +87,7 @@ red {
 
 .disabled {
   opacity: 0.6;
-  cursor: not-allowed;
+  cursor: not-allowed !important;
 }
 
 .disabled button {
@@ -273,7 +273,6 @@ red {
 }
 .popup {
   position: absolute;
-  padding: 10px;
   width: 500px;
   background: #f2f2f2;
   font-size: 20px;

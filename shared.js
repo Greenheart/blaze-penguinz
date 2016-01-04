@@ -13,7 +13,13 @@ Meteor.methods({
       * roomId id of the current room
     */
 
-    var room = Rooms.findOne({ _id: roomId });
+    var room = Rooms.findOne({ _id: roomId }, {
+      fields: {
+        _id: 0,
+        players: 1,
+        isPublic: 1
+      }
+    });
     if (room && room.players[0] === Meteor.userId()) {
       // Only allow the room's host to make the change
       Rooms.update({ _id: roomId }, {

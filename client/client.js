@@ -1,16 +1,8 @@
-Tracker.autorun(function() {  // limit publications to authenticated clients
-  if (Meteor.userId()) {
-    Meteor.subscribe("rooms");
-    Meteor.subscribe("currentUser");
-    Meteor.subscribe("friends");
-    Meteor.subscribe('onlineStatus');
-    Meteor.subscribe("usersInCurrentRoom");
-  }
-});
-
 Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
 });
+
+var roomUpdateHandler;  // observes changes to the current room
 
 Template.body.helpers({
   'errorMsg': function() {
@@ -48,8 +40,9 @@ Template.lobby.events({
       }
     } else {
       Meteor.call("joinRoom");  // try to join a random room
+      startRoomUpdateHandler();
     }
-
+    updateSubscriptions();
   },
   'click .toggle-button': function() {
     var room = Rooms.findOne({ players: Meteor.userId() });
@@ -85,6 +78,7 @@ Template.lobby.events({
       displayError("You can't add yourself");
       return;
     }
+
     var user = Meteor.users.findOne({username: input});
     if (user && Meteor.user().profile.friends.indexOf(user._id) > -1) {
       displayError("You're already friends with "+input+"!");
@@ -104,6 +98,7 @@ Template.lobby.events({
       	if (res) {
           displayError(res);
         }
+        updateSubscriptions();
       });
     } else if (input.length > USERNAME_MAX_LEN) {
       displayError("The name is too long");
@@ -117,7 +112,7 @@ Template.lobby.events({
     var room = Rooms.findOne({ players: Meteor.userId() });
     // If the player is not in a room, create a new one on inviting
     if (!room) {
-      Meteor.call("createRoom", true);
+      Meteor.call("addNewRoom", true, "invite"); // join = true, isPublic = "invite" (since we're inviting friends)
     }
 
     Meteor.call("invitePlayer", {
@@ -142,6 +137,8 @@ Template.lobby.events({
     Meteor.call('leaveRoom', room);
     Meteor.call('joinRoom', Meteor.user().profile.invites[0]);
     Meteor.call('removeInvite');
+    startRoomUpdateHandler();
+    updateSubscriptions();
   },
   'click .leaveRoom': function(event) {
     var room = Rooms.findOne({ players: Meteor.userId() }, {
@@ -150,6 +147,8 @@ Template.lobby.events({
       }
     });
     Meteor.call('leaveRoom', room);
+    stopRoomUpdateHandler();
+    updateSubscriptions();
   }
 });
 
@@ -232,7 +231,7 @@ Template.lobby.helpers({
   userIsInRoom: function() {
     var room = Rooms.findOne({ players: Meteor.userId() });
     if (room) {
-      Session.set("currentRoomId", room._id);
+      startRoomUpdateHandler();
       return true;
     }
     return false;
@@ -264,4 +263,38 @@ function userIsHost() {
 function displayError(msg) {
   // Alert users about errors
   Session.set('errorMessage', msg);
+}
+
+function updateSubscriptions() {
+  if (Meteor.userId()) {  // limit publications to authenticated clients
+    console.log("updating subs");
+    Meteor.subscribe("rooms");
+    Meteor.subscribe("currentUser");
+    Meteor.subscribe("friends");
+    Meteor.subscribe('onlineStatus');
+    Meteor.subscribe("usersInCurrentRoom");
+  }
+}
+
+
+function startRoomUpdateHandler() {
+  // observe changes to the room.players where the current player is in
+  //console.log("starting roomUpdateHandler");
+
+  var query = Rooms.find({ players: Meteor.userId() }, { fields: { players: 1 }});
+  roomUpdateHandler = query.observeChanges({
+    changed: function(id, room) {
+      if (room.players) {
+        updateSubscriptions();
+      }
+    }
+  });
+
+  //TODO: add code that stop the __roomUpdateHandler__ when the game in a room is finished
+  //  HOW? --> simply run this method --> roomUpdateHandler.stop();   // stop observing changes
+}
+
+function stopRoomUpdateHandler() {
+  //console.log("stopping roomUpdateHandler");
+  roomUpdateHandler.stop();
 }

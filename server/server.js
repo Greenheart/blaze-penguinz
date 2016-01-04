@@ -3,33 +3,36 @@ Meteor.publish('rooms', function() {
 });
 
 Meteor.publish('currentUser', function() {
-  if (this.userId) {
-    return Meteor.users.find({ _id: this.userId }, {
-      fields: {
-        'status.online': 1,
-        'profile': 1,      // Includes 'profile.friends' to allow current user to see their friendlist
-        'username': 1
-      }
-    });
-  }
+  return Meteor.users.find({ _id: this.userId }, {
+    fields: {
+      'profile': 1,
+      'username': 1
+    }
+  });
 });
 
 Meteor.publish("usersInCurrentRoom", function() {
   if (this.userId) {
-    var room = Rooms.findOne({ players: this.userId });
+    var room = Rooms.findOne({ players: this.userId }, {
+      fields: {
+        players: 1,
+        _id: 0
+      }
+    });
     if (room) {
       // remove currentUser from the array
       room.players.splice(room.players.indexOf(this.userId), 1);
 
       // get the cursor that finds info about users in the current room
-      var usersInRoom = Meteor.users.find({
-        players: {
+      return usersInRoom = Meteor.users.find({
+        _id: {
           $in: room.players
         }
       }, {
-        'status.online': 1,
-        'profile.rating': 1,
-        'username': 1
+        fields: {
+          'profile.rating': 1,
+          'username': 1
+        }
       });
     }
   }
@@ -39,11 +42,14 @@ Meteor.publish('friends', function() {
   if (this.userId) {
     return Meteor.users.find({
       _id: {
-        $in: Meteor.users.findOne({ _id: this.userId }).profile.friends
+        $in: Meteor.users.findOne({ _id: this.userId }, {
+          fields: {
+            'profile.friends': 1
+          }
+        }).profile.friends
       }
     }, {
       fields: {
-        'status.online': 1,
         'profile.rating': 1,
         'username': 1
       }
@@ -52,13 +58,11 @@ Meteor.publish('friends', function() {
 });
 
 Meteor.publish("onlineStatus", function() {
-  if (this.userId) {
-    return Meteor.users.find({ "status.online": true }, {
-      fields: {
-        'status.online': 1
-      }
-    });
-  }
+  return Meteor.users.find({ "status.online": true }, {
+    fields: {
+      'status.online': 1
+    }
+  });
 });
 
 
@@ -97,6 +101,10 @@ Meteor.methods({
     */
 
     if (this.userId) {
+      if (Rooms.findOne({ players: this.userId }, { fields: { _id: 1 } })) {
+        return "You can only be in one room at a time!";
+      }
+
       if (friendId) {
         var room = Rooms.findOne({
           players: {
@@ -106,6 +114,10 @@ Meteor.methods({
             $in: [ friendId ]
           },
           inGame: false
+        }, {
+          fields: {
+            _id: 1
+          }
         });
       } else {
         var room = Rooms.findOne({
@@ -115,28 +127,31 @@ Meteor.methods({
             }
           },
           isPublic: true              // Only find public games --> skip invite-only party lobbies
+        }, {
+          fields: {
+            _id: 1
+          }
         });
-      }
-
-      if (room && room.players.indexOf(Meteor.userId()) > -1) {
-        return "You can only be in one room at a time!";   // Only allow players to join one room at a time
       }
 
       if (room) {
         addToRoom(room._id);
       } else {
         if (friendId) {
-          return "You cannot join this room"
+          return "You cannot join this room";
         } else {
-          createRoom(true); // set flag "addUser" to true to also add the current user to the new room
+          createRoom(true); // set flag "join" to true to also add the current user to the new room
         }
       }
     }
   },
 
-  createRoom: function(join) {
+  addNewRoom: function(join, isPublic) {
     if (this.userId) {
-      createRoom(join);
+      if (!Rooms.findOne({ players: this.userId }, { fields: { _id: 1 } })) {
+        // Only allow if user isn't already in a room
+        createRoom(join, isPublic);
+      }
     }
   },
 
@@ -184,6 +199,18 @@ Meteor.methods({
           username: 1
         }
       });
+
+      var userFriends = Meteor.users.findOne({ _id: this.userId }, {
+        fields: {
+          _id: 0,
+          'profile.friends': 1
+        }
+      }).profile.friends;
+
+
+      if (user && userFriends.indexOf(user._id) > -1) {
+        return "You're already friends with "+query.username+"!";
+      }
 
       if (user) {
         Meteor.users.update({ _id: Meteor.userId() }, {
@@ -273,20 +300,27 @@ function addToRoom(roomId) {
   });
 }
 
-function createRoom(addUser) {
+function createRoom(join, isPublic) {
   /*
   Create a new empty room
 
-  addUser: Boolean flag --> Should we also add the current user to the newly created room?
+  join: Boolean flag --> Should we also add the current user to the newly created room?
+  isPublic: String flag --> Should room be public?
   */
+
+  if (isPublic === "invite") {
+    isPublic = false;
+  } else {
+    isPublic = true;
+  }
+
   var room = {
     players: [],
     playerTarget: {},
     playerHP: {},
     spellTarget: {},
     inGame: false,
-    isPublic: true  // TODO: How are we going to handle public and invite-only-rooms?
-                    //       This solution allows us to filter and only work with rooms of the right type
+    isPublic: isPublic
   }
 
   Rooms.insert(room, function(err, roomInserted) {
@@ -294,7 +328,7 @@ function createRoom(addUser) {
       console.log(err);
     } else {
       console.log("creating new room: " + roomInserted);
-      if (addUser) {
+      if (join) {
         addToRoom(roomInserted);
       }
     }
