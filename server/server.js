@@ -229,9 +229,14 @@ Meteor.methods({
     // Fetch the user that is to be sent an invite
     var user = Meteor.users.findOne(query, {
       fields: {
-        _id: 1
+        _id: 1,
+        'profile.invites': 1
       }
     });
+
+    if (user && user.profile.invites.indexOf(Meteor.userId()) > -1) {
+      return; // It's only possible to invite a user one time
+    }
 
     // If the user was found, send him an invite from the player that sent it
     if (user) {
