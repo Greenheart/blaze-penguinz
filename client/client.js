@@ -110,6 +110,12 @@ Template.lobby.events({
     event.preventDefault();
 
     var room = Rooms.findOne({ players: Meteor.userId() });
+
+    if (room && room.players.indexOf(this._id) > -1) {
+      displayError("This player is already in your room");
+      return;
+    }
+
     // If the player is not in a room, create a new one on inviting
     if (!room) {
       Meteor.call("addNewRoom", true, "invite"); // join = true, isPublic = "invite" (since we're inviting friends)
