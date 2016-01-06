@@ -35,7 +35,7 @@ Template.lobby.events({
     var room = Rooms.findOne({ players: Meteor.userId() });
 
     if (room) {
-      if (userIsHost()) {
+      if (userIsHost() && room.players.length >= 2) {
         Meteor.call("startGame");
       }
     } else {
