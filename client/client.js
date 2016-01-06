@@ -2,6 +2,12 @@ Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
 });
 
+Tracker.autorun(function(){
+  if (Meteor.userId()) {
+    updateSubscriptions();
+  }
+});
+
 var roomUpdateHandler;  // observes changes to the current room
 
 Template.body.helpers({
