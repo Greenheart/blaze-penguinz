@@ -253,6 +253,12 @@ Template.lobby.helpers({
   },
   usersOnlineCount: function() {
    return Meteor.users.find({ "status.online": true }).count();
+  },
+  gameCanStart: function() {
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    if (room) {
+      return room.players.length >= 2;
+    }
   }
 });
 
