@@ -168,7 +168,7 @@ Template.lobby.events({
 
 Template.lobby.helpers({
   playerInvited: function() {
-    if (Meteor.user().profile.invites.length >= 1) {
+    if (Meteor.userId() && Meteor.user().profile.invites.length >= 1) {
       return Meteor.users.findOne(Meteor.user().profile.invites[0]).username;
     }
   },
@@ -218,8 +218,10 @@ Template.lobby.helpers({
     Check if the current user in the Blaze-context is online.
     Might be unclear but it might make sense when looking at how it's used in the lobby-template
     */
-    if (this.status) {
-      return this.status.online;
+    if (Meteor.userId()) {
+      if (this.status) {
+        return this.status.online;
+      }
     }
   },
 
@@ -227,27 +229,28 @@ Template.lobby.helpers({
     /*
     Find and return info about friends
     */
-
-    var friends = Meteor.users.find({
-      _id: {
-        $in: Meteor.user().profile.friends  // the friendlist
+    if (Meteor.userId()) {
+      var friends = Meteor.users.find({
+        _id: {
+          $in: Meteor.user().profile.friends  // the friendlist
+        }
+      },
+      {
+        fields: {
+          username: 1,
+          'profile.rating': 1,
+          'status.online': 1
+        }
+      })
+      .fetch()
+      .sort(function(a, b) {   // Highest rating first (descending)
+        if (a && b) {
+          return b.profile.rating - a.profile.rating;
+        }
+      });
+      if (friends) {
+        return friends;
       }
-    },
-    {
-      fields: {
-        username: 1,
-        'profile.rating': 1,
-        'status.online': 1
-      }
-    })
-    .fetch()
-    .sort(function(a, b) {   // Highest rating first (descending)
-      if (a && b) {
-        return b.profile.rating - a.profile.rating;
-      }
-    });
-    if (friends) {
-      return friends;
     }
   },
 
@@ -266,10 +269,14 @@ Template.lobby.helpers({
     }
   },
   userIsRoomHost: function() {
-    return userIsHost();
+    if (Meteor.userId()) {
+      return userIsHost();
+    }
   },
   usersOnlineCount: function() {
-   return Meteor.users.find({ "status.online": true }).count();
+    if (Meteor.userId()) {
+      return Meteor.users.find({ "status.online": true }).count();
+    }
   },
   gameCanStart: function() {
     var room = Rooms.findOne({ players: Meteor.userId() });
