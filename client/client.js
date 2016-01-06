@@ -160,7 +160,7 @@ Template.lobby.events({
 
 Template.lobby.helpers({
   playerInvited: function() {
-    if (Meteor.user().profile.invites) {
+    if (Meteor.user().profile.invites.length >= 1) {
       return Meteor.users.findOne(Meteor.user().profile.invites[0]).username;
     }
   },
