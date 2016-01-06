@@ -210,7 +210,9 @@ Template.lobby.helpers({
     Check if the current user in the Blaze-context is online.
     Might be unclear but it might make sense when looking at how it's used in the lobby-template
     */
-    return this.status.online;
+    if (this.status) {
+      return this.status.online;
+    }
   },
 
   getFriends: function() {
