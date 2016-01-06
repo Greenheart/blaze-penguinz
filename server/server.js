@@ -105,7 +105,7 @@ Meteor.methods({
         return "You can only be in one room at a time!";
       }
 
-      if (friendId) {
+      if (friendId) { // If joining through invite of friend
         var room = Rooms.findOne({
           players: {
             $not: {
@@ -119,7 +119,7 @@ Meteor.methods({
             _id: 1
           }
         });
-      } else {
+      } else {  // If just joining random room
         var room = Rooms.findOne({
           players: {
             $not: {
@@ -138,7 +138,7 @@ Meteor.methods({
         addToRoom(room._id);
       } else {
         if (friendId) {
-          return "You cannot join this room";
+          return "Could not join that room";
         } else {
           createRoom(true); // set flag "join" to true to also add the current user to the new room
         }

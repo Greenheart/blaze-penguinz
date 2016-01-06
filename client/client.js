@@ -145,7 +145,11 @@ Template.lobby.events({
       }
     });
     Meteor.call('leaveRoom', room);
-    Meteor.call('joinRoom', Meteor.user().profile.invites[0]);
+    Meteor.call('joinRoom', Meteor.user().profile.invites[0], function(err, res) {
+      if (res) {
+        displayError(res);
+      }
+    });
     Meteor.call('removeInvite');
     startRoomUpdateHandler();
     updateSubscriptions();
@@ -170,12 +174,14 @@ Template.lobby.helpers({
   },
 
   getRoomHost: function() {
-  /*
-  Return the host of the current room
-  */
-  var room = Rooms.findOne({ players: Meteor.userId() });
-  return {
-      username: Meteor.users.findOne(room.players[0]).username  //gets username for the room's host
+    /*
+    Return the host of the current room
+    */
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    if (room) {
+      return {
+        username: Meteor.users.findOne(room.players[0]).username  //gets username for the room's host
+      }
     }
   },
 
@@ -186,21 +192,25 @@ Template.lobby.helpers({
     var room = Rooms.findOne({ players: Meteor.userId() });
     var lobbyMembers = [];
 
-    // loop through each member and only keep necessary data to add players to rooms
-    room.players.forEach(function(playerId, index) {
-      if (index > 0) { //Skip the first player --> the host
-        lobbyMembers.push(Meteor.users.findOne(playerId));
-      }
-    });
+    if (room) {
+      // loop through each member and only keep necessary data to add players to rooms
+      room.players.forEach(function(playerId, index) {
+        if (index > 0) { //Skip the first player --> the host
+          lobbyMembers.push(Meteor.users.findOne(playerId));
+        }
+      });
 
-    lobbyMembers = lobbyMembers.map(function(player) {
-      // loop through each member and only keep necessary data
-      var member = {};
-      //NOTE: Maybe return rating for each member too? --> Also add this to getRoomHost in that case
-      member.username = player.username;
-      return member;
-    });
-    return lobbyMembers;
+      lobbyMembers = lobbyMembers.map(function(player) {
+        // loop through each member and only keep necessary data
+        var member = {};
+        //NOTE: Maybe return rating for each member too? --> Also add this to getRoomHost in that case
+        member.username = player.username;
+        return member;
+      });
+      if (lobbyMembers) {
+        return lobbyMembers;
+      }
+    }
   },
 
   userIsOnline: function() {
@@ -236,8 +246,9 @@ Template.lobby.helpers({
         return b.profile.rating - a.profile.rating;
       }
     });
-
-    return friends;
+    if (friends) {
+      return friends;
+    }
   },
 
   userIsInRoom: function() {
