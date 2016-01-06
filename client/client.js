@@ -2,12 +2,6 @@ Accounts.ui.config({
   passwordSignupFields: "USERNAME_ONLY"
 });
 
-Tracker.autorun(function(){
-  if (Meteor.userId()) {
-    updateSubscriptions();
-  }
-});
-
 var roomUpdateHandler;  // observes changes to the current room
 
 Template.body.helpers({
@@ -33,6 +27,10 @@ Template.body.events({
   'click .acceptError': function(event) {
     Session.set('errorMessage', '');
   }
+});
+
+Template.lobby.onCreated(function() {
+  updateSubscriptions();
 });
 
 Template.lobby.events({
@@ -292,30 +290,32 @@ function updateSubscriptions() {
     var room = Rooms.findOne({ players: Meteor.userId() });
     if (!room || (room && !room.inGame)) {
       // Only subscribe to these if not in game
-      ["friends", "onlineStatus"].forEach(subscribeIfNotActive);
+      ["friends", "onlineStatus"].forEach(refreshSubscription);
     }
 
     // Subscribe to these both in and out of game
-    ["rooms", "currentUser", "usersInCurrentRoom"].forEach(subscribeIfNotActive);
+    ["rooms", "currentUser", "usersInCurrentRoom"].forEach(refreshSubscription);
   }
 }
 
-
-function subscribeIfNotActive(sub) {
+function refreshSubscription(subName) {
   /*
-  Subscribe to a subscription, but only if it's not already active
+  Refresh a given subscription by deleting the old subscription object and adding a new one
 
-  sub: String with name of a subscription that should be checked and possibly activated
+  subName: String with the name of a subscription
   */
   var subs = Meteor.default_connection._subscriptions; // All current subscriptions
 
-  var curSubNames = Object.keys(subs).map(function(key) {
-    return subs[key].name;  // get the name property of each Subscription-object
-  });
-
-  if (curSubNames.indexOf(sub) === -1) {
-    Meteor.subscribe(sub);
+  for (var id in subs) {
+    if (subs.hasOwnProperty(id)) {
+      if (subs[id].name === subName) {
+        subs[id].stop();
+        delete subs[id];
+      }
+    }
   }
+
+  Meteor.subscribe(subName);
 }
 
 function startRoomUpdateHandler() {
