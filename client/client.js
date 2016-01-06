@@ -288,14 +288,35 @@ function displayError(msg) {
 function updateSubscriptions() {
   if (Meteor.userId()) {  // limit publications to authenticated clients
     console.log("updating subs");
-    Meteor.subscribe("rooms");
-    Meteor.subscribe("currentUser");
-    Meteor.subscribe("friends");
-    Meteor.subscribe('onlineStatus');
-    Meteor.subscribe("usersInCurrentRoom");
+
+    var room = Rooms.findOne({ players: Meteor.userId() });
+    if (!room || (room && !room.inGame)) {
+      // Only subscribe to these if not in game
+      ["friends", "onlineStatus"].forEach(subscribeIfNotActive);
+    }
+
+    // Subscribe to these both in and out of game
+    ["rooms", "currentUser", "usersInCurrentRoom"].forEach(subscribeIfNotActive);
   }
 }
 
+
+function subscribeIfNotActive(sub) {
+  /*
+  Subscribe to a subscription, but only if it's not already active
+
+  sub: String with name of a subscription that should be checked and possibly activated
+  */
+  var subs = Meteor.default_connection._subscriptions; // All current subscriptions
+
+  var curSubNames = Object.keys(subs).map(function(key) {
+    return subs[key].name;  // get the name property of each Subscription-object
+  });
+
+  if (curSubNames.indexOf(sub) === -1) {
+    Meteor.subscribe(sub);
+  }
+}
 
 function startRoomUpdateHandler() {
   // observe changes to the room.players where the current player is in
