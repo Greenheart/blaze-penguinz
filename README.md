@@ -1,6 +1,8 @@
 # Blaze Penguinz
 A realtime multiplayer arena game built with Meteor and [Phaser](https://www.phaser.io)
 
+![The Lobby View](http://i.imgur.com/DgQL9Tr.png)
+The lobby host can toggle the game to be private or public. Players can invite their friends.
 
 ## Install the game on your computer
 
